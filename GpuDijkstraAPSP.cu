@@ -30,7 +30,6 @@ void dijkstra(int numVertex, int* costMatrix, bool* visited, int* distance, int*
 
     if (src < numVertex) {
         distance[src * numVertex + src] = 0;
-        parent[src * numVertex + src] = -1;
 
         for (int i = 0; i < numVertex - 1; i++) {
             int u = extractMin(numVertex, distance, visited, src);
@@ -48,7 +47,7 @@ void dijkstra(int numVertex, int* costMatrix, bool* visited, int* distance, int*
     }
 }
 
-
+/*
 int main() {
     int h_numVertex = 6;
     int h_costMatrix[6][6] = {
@@ -93,3 +92,4 @@ int main() {
     
     printPathAPSP(h_numVertex, h_distance, h_parent);
 }
+*/
