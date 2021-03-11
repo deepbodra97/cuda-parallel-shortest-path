@@ -72,7 +72,7 @@ void dijkstra(int numVertex, int *costMatrix, int src) {
     }   
 }
 
-
+/*
 int main() {
     int numVertex = 6;
     int costMatrix[6][6] = {
@@ -87,3 +87,4 @@ int main() {
 
     dijkstra(numVertex, (int*)costMatrix, src);
 }
+*/
