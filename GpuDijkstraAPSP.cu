@@ -29,12 +29,12 @@ void printPath(int numVertex, int* distance, int* parent, int src) {
             cout << i << "\t" << distance[src * numVertex + i] << "\t";
             cout << i;
 
-            /*int tmp = parent[src * numVertex + i];
+            int tmp = parent[src * numVertex + i];
             while (tmp != -1)
             {
                 cout << "<-" << tmp;
                 tmp = parent[src * numVertex + tmp];
-            }*/
+            }
         }
         else {
             cout << i << "\t" << "NA" << "\t" << "-";
@@ -84,9 +84,9 @@ int main() {
     int* h_distance = (int*)malloc(h_numVertex * h_numVertex * sizeof(int));
     bool* h_visited = (bool*)malloc(h_numVertex * h_numVertex * sizeof(bool));
 
-    fill(h_parent, h_parent + h_numVertex, INF);
-    fill(h_distance, h_distance + h_numVertex, false);
-    fill(h_visited, h_visited + h_numVertex, -1);
+    fill(h_parent, h_parent + h_numVertex * h_numVertex, -1);
+    fill(h_distance, h_distance + h_numVertex * h_numVertex, INF);
+    fill(h_visited, h_visited + h_numVertex * h_numVertex, false);
 
     const int bytesNumVertex = sizeof(int);
     const int bytesCostMatrix = h_numVertex * h_numVertex * sizeof(int);
@@ -96,20 +96,21 @@ int main() {
     int* d_distance;
     bool* d_visited;
 
-    cudaCheck(cudaMalloc(&d_costMatrix, bytesCostMatrix));
-    cudaCheck(cudaMalloc(&d_parent, bytesCostMatrix));
-    cudaCheck(cudaMalloc(&d_distance, bytesCostMatrix));
-    cudaCheck(cudaMalloc(&d_visited, bytesCostMatrix));
+    cudaCheck(cudaMalloc((void**)&d_costMatrix, bytesCostMatrix));
+    cudaCheck(cudaMalloc((void**)&d_parent, bytesCostMatrix));
+    cudaCheck(cudaMalloc((void**)&d_distance, bytesCostMatrix));
+    cudaCheck(cudaMalloc((void**)&d_visited, bytesCostMatrix));
 
     cudaCheck(cudaMemcpy(d_costMatrix, h_costMatrix, bytesCostMatrix, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, h_parent, bytesCostMatrix, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_distance, h_distance, bytesCostMatrix, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_visited, h_visited, bytesCostMatrix, cudaMemcpyHostToDevice));
 
-    dijkstra<<<1, h_numVertex>>>(h_numVertex, d_costMatrix, d_visited, d_distance, d_parent);
+    dijkstra<<<1, h_numVertex >>>(h_numVertex, d_costMatrix, d_visited, d_distance, d_parent);
 
     cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
+    
 
     for (int src = 0; src < h_numVertex; src++) {
         printPath(h_numVertex, h_distance, h_parent, src);
