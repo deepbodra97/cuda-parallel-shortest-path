@@ -3,9 +3,9 @@
 
 #include <iostream>
 
-using namespace std;
+#include "utils.h"
 
-#define INF INT_MAX
+using namespace std;
 
 int extractMin(int numVertex, int* distance, bool* visited) {
     int minNode = -1;
@@ -18,28 +18,6 @@ int extractMin(int numVertex, int* distance, bool* visited) {
     }
     return minNode;
 }
-
-void printPath(int numVertex, int* distance, int* parent) {
-    cout << "Node\tCost\tPath"<<endl;
-    for (int i = 0; i < numVertex; i++) {
-        if(distance[i] != INF){
-            cout << i << "\t" << distance[i] << "\t";
-            cout << i;
-
-            int tmp = parent[i];
-            while (tmp != -1)
-            {
-                cout << "<-" << tmp;
-                tmp = parent[tmp];
-            }
-        }
-        else {
-            cout << i << "\t" << "NA" << "\t" << "-";
-        }
-        cout << endl;
-    }
-}
-
 
 void dijkstra(int numVertex, int *costMatrix, int src) {
     int* parent = (int*) malloc(numVertex * sizeof(int));
@@ -68,7 +46,7 @@ void dijkstra(int numVertex, int *costMatrix, int src) {
                 }
             }
         }
-        printPath(numVertex, distance, parent);
+        printPathSSSP(numVertex, distance, parent);
     }   
 }
 

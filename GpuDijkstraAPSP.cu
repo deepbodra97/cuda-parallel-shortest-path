@@ -5,9 +5,9 @@
 
 #include "cudaCheck.cuh"
 
-using namespace std;
+#include "utils.h"
 
-#define INF INT_MAX
+using namespace std;
 
 #define THREADS_PER_BLOCK 512
 
@@ -22,27 +22,6 @@ int extractMin(int numVertex, int* distance, bool* visited, int src) {
         }
     }
     return minNode;
-}
-
-void printPath(int numVertex, int* distance, int* parent, int src) {
-    cout << "Node\tCost\tPath" << endl;
-    for (int i = 0; i < numVertex; i++) {
-        if (distance[src * numVertex + i] != INF) {
-            cout << i << "\t" << distance[src * numVertex + i] << "\t";
-            cout << i;
-
-            int tmp = parent[src * numVertex + i];
-            while (tmp != -1)
-            {
-                cout << "<-" << tmp;
-                tmp = parent[src * numVertex + tmp];
-            }
-        }
-        else {
-            cout << i << "\t" << "NA" << "\t" << "-";
-        }
-        cout << endl;
-    }
 }
 
 __global__
@@ -112,10 +91,5 @@ int main() {
     cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
     
-
-    for (int src = 0; src < h_numVertex; src++) {
-        cout << "Source: " << src << endl;
-        printPath(h_numVertex, h_distance, h_parent, src);
-        cout << endl;
-    }
+    printPathAPSP(h_numVertex, h_distance, h_parent);
 }
