@@ -9,6 +9,8 @@ using namespace std;
 
 #define INF INT_MAX
 
+#define THREADS_PER_BLOCK 512
+
 __device__
 int extractMin(int numVertex, int* distance, bool* visited, int src) {
     int minNode = -1;
@@ -47,8 +49,7 @@ __global__
 void dijkstra(int numVertex, int* costMatrix, bool* visited, int* distance, int* parent) {
     int src = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (distance != NULL && parent != NULL && visited != NULL) {
-
+    if (src < numVertex) {
         distance[src * numVertex + src] = 0;
         parent[src * numVertex + src] = -1;
 
@@ -106,13 +107,15 @@ int main() {
     cudaCheck(cudaMemcpy(d_distance, h_distance, bytesCostMatrix, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_visited, h_visited, bytesCostMatrix, cudaMemcpyHostToDevice));
 
-    dijkstra<<<1, h_numVertex >>>(h_numVertex, d_costMatrix, d_visited, d_distance, d_parent);
+    dijkstra<<<(h_numVertex-1)/THREADS_PER_BLOCK+1, THREADS_PER_BLOCK>>>(h_numVertex, d_costMatrix, d_visited, d_distance, d_parent);
 
     cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
     
 
     for (int src = 0; src < h_numVertex; src++) {
+        cout << "Source: " << src << endl;
         printPath(h_numVertex, h_distance, h_parent, src);
+        cout << endl;
     }
 }
