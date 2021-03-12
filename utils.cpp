@@ -1,5 +1,27 @@
 #include "utils.h"
 
+void fileToCostMatrix(string filename, int numVertex, int* costMatrix) {
+    cout << "fileToCostMatrix"<<endl;
+    ifstream file(filename);
+    string line;
+    /*int skip = 8;
+    while (skip != 0 && getline(file, line)) {
+        skip--;
+    }*/
+    
+    while (getline(file, line)) {
+        stringstream linestream(line);
+        vector<string> tokens;
+        string token;
+        while (linestream >> token) {
+            tokens.push_back(token);
+        }
+        int src = stoi(tokens[1])-1, dest = stoi(tokens[2])-1, cost = stoi(tokens[3]);
+        cout <<"error"<< src << " " << dest << endl;
+        costMatrix[src * numVertex + dest] = cost;
+    }
+}
+
 void printPathSSSP(int numVertex, int* distance, int* parent) {
     cout << "Node\tCost\tPath" << endl;
     for (int i = 0; i < numVertex; i++) {

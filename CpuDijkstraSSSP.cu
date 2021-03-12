@@ -29,8 +29,7 @@ void dijkstra(int numVertex, int src, int *costMatrix, bool *visited, int * dist
         }
         visited[u] = true;
         for (int v = 0; v < numVertex; v++) {
-            if (!visited[v] && costMatrix[u * numVertex + v] != INF && (distance[u] + costMatrix[u * numVertex + v]) < distance[v])
-            {
+            if (!visited[v] && costMatrix[u * numVertex + v] != INF && (distance[u] + costMatrix[u * numVertex + v]) < distance[v]){
                 parent[v] = u;
                 distance[v] = distance[u] + costMatrix[u * numVertex + v];
             }
@@ -40,20 +39,35 @@ void dijkstra(int numVertex, int src, int *costMatrix, bool *visited, int * dist
 
 
 int main() {
-    int numVertex = 6;
-    int costMatrix[6][6] = {
+    int numVertex = 264346;
+    /*int costMatrix[6][6] = {
         {INF, 1, 5, INF, INF, INF},
         {INF, INF, 2, 2, 1, INF},
         {INF, INF, INF, INF, 2, INF},
         {INF, INF, INF, INF, 3, 1},
         {INF, INF, INF, INF, INF, 2},
         {INF, INF, INF, INF, INF, INF},
-    };
+    };*/
     int src = 1;
 
-    int* parent = (int*)malloc(numVertex * sizeof(int));
-    int* distance = (int*)malloc(numVertex * sizeof(int));
-    bool* visited = (bool*)malloc(numVertex * sizeof(bool));
+    int* costMatrix = (int*) malloc(numVertex * numVertex * sizeof(int));
+    if (costMatrix == NULL) {
+        cout << "malloc failed" << endl;
+    }
+    fill(costMatrix, costMatrix + numVertex * numVertex, INF);
+    
+
+    fileToCostMatrix(string("nyc-d.txt"), numVertex, costMatrix);
+    /*for(int i=0; i<numVertex; i++){
+        for (int j = 0; j < numVertex; j++) {
+            cout << costMatrix[i * numVertex + j] << " ";
+        }
+        cout << endl;
+    }*/
+
+    int* parent = (int*) malloc(numVertex * sizeof(int));
+    int* distance = (int*) malloc(numVertex * sizeof(int));
+    bool* visited = (bool*) malloc(numVertex * sizeof(bool));
 
     fill(distance, distance + numVertex, INF);
     fill(visited, visited + numVertex, false);
