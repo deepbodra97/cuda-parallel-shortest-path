@@ -127,8 +127,8 @@ int main() {
         for (int j = 0; j < numVertex; j++) {
             if (costMatrix[i][j] != INF) {
                 struct AdjacencyListNode* newNode = newAdjacencyListNode(j, costMatrix[i][j]);
-                newNode->next = graph->neighbors[src].head;
-                graph->neighbors[src].head = newNode;
+                newNode->next = graph->neighbors[i].head;
+                graph->neighbors[i].head = newNode;
             }
         }
     }
