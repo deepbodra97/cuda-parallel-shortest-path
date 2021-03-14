@@ -37,42 +37,127 @@ void dijkstra(int numVertex, int src, int *costMatrix, bool *visited, int * dist
     }
 }
 
+void dijkstra(struct Graph* graph, int src, bool* visited, int* distance, int* parent) {
+    distance[src] = 0;
+
+    for (int i = 0; i < graph->numVertex - 1; i++) {
+        int u = extractMin(graph->numVertex, distance, visited);
+        if (u == -1) { // no min node to explore
+            break;
+        }
+        visited[u] = true;
+        struct AdjacencyListNode* neighbor = graph->neighbors[u].head;
+        while(neighbor != NULL){
+            if (!visited[neighbor->dest] && (distance[u] + neighbor->cost) < distance[neighbor->dest]) {
+                parent[neighbor->dest] = u;
+                distance[neighbor->dest] = distance[u] + neighbor->cost;
+            }
+            neighbor = neighbor->next;
+        }
+    }
+}
+
+struct AdjacencyListNode* newAdjacencyListNode(int dest, int weight){
+    struct AdjacencyListNode* newNode = (struct AdjacencyListNode*) malloc(sizeof(struct AdjacencyListNode));
+    newNode->dest = dest;
+    newNode->cost = weight;
+    newNode->next = NULL;
+    return newNode;
+}
 
 int main() {
-    int numVertex = 264346;
-    /*int costMatrix[6][6] = {
+    //int numVertex = 264346;
+    ///*int costMatrix[6][6] = {
+    //    {INF, 1, 5, INF, INF, INF},
+    //    {INF, INF, 2, 2, 1, INF},
+    //    {INF, INF, INF, INF, 2, INF},
+    //    {INF, INF, INF, INF, 3, 1},
+    //    {INF, INF, INF, INF, INF, 2},
+    //    {INF, INF, INF, INF, INF, INF},
+    //};*/
+    //int src = 1;
+
+    //int* costMatrix = (int*) malloc(numVertex * numVertex * sizeof(int));
+    //if (costMatrix == NULL) {
+    //    cout << "malloc failed" << endl;
+    //}
+    //fill(costMatrix, costMatrix + numVertex * numVertex, INF);
+    //
+
+    //// fileToCostMatrix(string("nyc-d.txt"), numVertex, costMatrix);
+    //cout << costMatrix[3000*numVertex+3000] << endl;
+    ///*for(int i=0; i<numVertex; i++){
+    //    for (int j = 0; j < numVertex; j++) {
+    //        cout << costMatrix[i * numVertex + j] << " ";
+    //    }
+    //    cout << endl;
+    //}*/
+
+    //int* parent = (int*) malloc(numVertex * sizeof(int));
+    //int* distance = (int*) malloc(numVertex * sizeof(int));
+    //bool* visited = (bool*) malloc(numVertex * sizeof(bool));
+
+    //fill(distance, distance + numVertex, INF);
+    //fill(visited, visited + numVertex, false);
+    //fill(parent, parent + numVertex, -1);
+
+    //dijkstra(numVertex, src, (int*)costMatrix, visited, distance, parent);
+    //printPathSSSP(numVertex, distance, parent);
+
+    int numVertex = 6;
+    int costMatrix[6][6] = {
         {INF, 1, 5, INF, INF, INF},
         {INF, INF, 2, 2, 1, INF},
         {INF, INF, INF, INF, 2, INF},
         {INF, INF, INF, INF, 3, 1},
         {INF, INF, INF, INF, INF, 2},
         {INF, INF, INF, INF, INF, INF},
-    };*/
+    };
     int src = 1;
 
-    int* costMatrix = (int*) malloc(numVertex * numVertex * sizeof(int));
-    if (costMatrix == NULL) {
-        cout << "malloc failed" << endl;
+    struct Graph* graph = (struct Graph*)malloc(sizeof(struct Graph));
+    graph->numVertex = numVertex;
+    graph->neighbors = (struct AdjacencyList*) malloc(numVertex * sizeof(struct AdjacencyList));
+
+    for (int i = 0; i < numVertex; ++i){
+        graph->neighbors[i].head = NULL;
     }
-    fill(costMatrix, costMatrix + numVertex * numVertex, INF);
-    
 
-    fileToCostMatrix(string("nyc-d.txt"), numVertex, costMatrix);
-    /*for(int i=0; i<numVertex; i++){
+    for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
-            cout << costMatrix[i * numVertex + j] << " ";
+            if (costMatrix[i][j] != INF) {
+                struct AdjacencyListNode* newNode = newAdjacencyListNode(j, costMatrix[i][j]);
+                newNode->next = graph->neighbors[src].head;
+                graph->neighbors[src].head = newNode;
+            }
         }
-        cout << endl;
-    }*/
+    }
 
-    int* parent = (int*) malloc(numVertex * sizeof(int));
-    int* distance = (int*) malloc(numVertex * sizeof(int));
-    bool* visited = (bool*) malloc(numVertex * sizeof(bool));
+
+    //int* costMatrix = (int*)malloc(numVertex * numVertex * sizeof(int));
+    //if (costMatrix == NULL) {
+    //    cout << "malloc failed" << endl;
+    //}
+    //fill(costMatrix, costMatrix + numVertex * numVertex, INF);
+
+
+    //// fileToCostMatrix(string("nyc-d.txt"), numVertex, costMatrix);
+    //cout << costMatrix[3000 * numVertex + 3000] << endl;
+    ///*for(int i=0; i<numVertex; i++){
+    //    for (int j = 0; j < numVertex; j++) {
+    //        cout << costMatrix[i * numVertex + j] << " ";
+    //    }
+    //    cout << endl;
+    //}*/
+
+    int* parent = (int*)malloc(numVertex * sizeof(int));
+    int* distance = (int*)malloc(numVertex * sizeof(int));
+    bool* visited = (bool*)malloc(numVertex * sizeof(bool));
 
     fill(distance, distance + numVertex, INF);
     fill(visited, visited + numVertex, false);
     fill(parent, parent + numVertex, -1);
 
-    dijkstra(numVertex, src, (int*)costMatrix, visited, distance, parent);
+    dijkstra(graph, src, visited, distance, parent);
     printPathSSSP(numVertex, distance, parent);
 }
