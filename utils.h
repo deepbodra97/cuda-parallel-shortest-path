@@ -1,13 +1,15 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include<iostream>
-#include<fstream>
-#include<string>
-#include<vector>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <list>
+#include <map>
 #include <sstream>
 
-#define INF INT_MAX
+#define INF INT_MAX	
 
 using namespace std;
 
@@ -28,6 +30,7 @@ struct Graph {
 
 void fileToCostMatrix(string filename, int numVertex, int* costMatrix);
 struct Graph* fileToAdjacencyList(string filename, struct Graph* costMatrix);
+void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges);
 
 void printPathSSSP(int numVertex, int* distance, int* parent);
 void printPathAPSP(int numVertex, int* distance, int* parent);

@@ -1,5 +1,13 @@
 #include "utils.h"
 
+void splitBySpaceToVector(const string& line, vector<string>& tokens) {
+    stringstream linestream(line);
+    string token;
+    while (linestream >> token) {
+        tokens.push_back(token);
+    }
+}
+
 void fileToCostMatrix(string filename, int numVertex, int* costMatrix) {
     cout << "fileToCostMatrix"<<endl;
     ifstream file(filename);
@@ -30,6 +38,7 @@ struct AdjacencyListNode* newAdjacencyListNode(int dest, int weight) {
     return newNode;
 }
 
+
 struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
     ifstream file(filename);
     string line;
@@ -56,6 +65,31 @@ struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
     }
     return graph;
 }
+
+void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges) {
+    cout << "fileToCostMatrix" << endl;
+    ifstream file(filename);
+    string line;
+    /*int skip = 8;
+    while (skip != 0 && getline(file, line)) {
+        skip--;
+    }*/
+
+    getline(file, line);
+    vector<string> tokens;
+
+    splitBySpaceToVector(line, tokens);
+    numVertex = stoi(tokens[0]), numEdges = stoi(tokens[1]);
+
+    while (getline(file, line)) {
+        tokens.clear();
+        splitBySpaceToVector(line, tokens);
+        int src = stoi(tokens[1]) - 1, dest = stoi(tokens[2]) - 1, cost = stoi(tokens[3]);
+        // cout <<"error"<< src << " " << dest << endl;
+        adjacencyList[src].push_back(make_pair(dest, cost));
+    }
+}
+
 
 void printPathSSSP(int numVertex, int* distance, int* parent) {
     cout << "Node\tCost\tPath" << endl;
