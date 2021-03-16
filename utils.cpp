@@ -17,9 +17,44 @@ void fileToCostMatrix(string filename, int numVertex, int* costMatrix) {
             tokens.push_back(token);
         }
         int src = stoi(tokens[1])-1, dest = stoi(tokens[2])-1, cost = stoi(tokens[3]);
-        cout <<"error"<< src << " " << dest << endl;
+        // cout <<"error"<< src << " " << dest << endl;
         costMatrix[src * numVertex + dest] = cost;
     }
+}
+
+struct AdjacencyListNode* newAdjacencyListNode(int dest, int weight) {
+    struct AdjacencyListNode* newNode = (struct AdjacencyListNode*)malloc(sizeof(struct AdjacencyListNode));
+    newNode->dest = dest;
+    newNode->cost = weight;
+    newNode->next = NULL;
+    return newNode;
+}
+
+struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
+    ifstream file(filename);
+    string line;
+    /*int skip = 8;
+    while (skip != 0 && getline(file, line)) {
+        skip--;
+    }*/
+
+    while (getline(file, line)) {
+        stringstream linestream(line);
+        vector<string> tokens;
+        string token;
+        while (linestream >> token) {
+            tokens.push_back(token);
+        }
+
+        int src = stoi(tokens[1]) - 1, dest = stoi(tokens[2]) - 1, cost = stoi(tokens[3]);
+
+        struct AdjacencyListNode* newNode = newAdjacencyListNode(dest, cost);
+        newNode->next = graph->neighbors[src].head;
+        graph->neighbors[src].head = newNode;
+
+        // cout << "error" << src << " " << dest << endl;
+    }
+    return graph;
 }
 
 void printPathSSSP(int numVertex, int* distance, int* parent) {

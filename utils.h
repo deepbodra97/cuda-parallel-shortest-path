@@ -27,6 +27,8 @@ struct Graph {
 };
 
 void fileToCostMatrix(string filename, int numVertex, int* costMatrix);
+struct Graph* fileToAdjacencyList(string filename, struct Graph* costMatrix);
+
 void printPathSSSP(int numVertex, int* distance, int* parent);
 void printPathAPSP(int numVertex, int* distance, int* parent);
 

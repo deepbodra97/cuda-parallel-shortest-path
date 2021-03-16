@@ -47,10 +47,79 @@ void dijkstra(int numVertex, int* costMatrix, bool* visited, int* distance, int*
     }
 }
 
-/*
-int main() {
-    int h_numVertex = 6;
-    int h_costMatrix[6][6] = {
+__global__
+void dijkstra(struct Graph* graph, bool* visited, int* distance, int* parent) {
+    int src = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (src < graph->numVertex) {
+        distance[src * graph->numVertex + src] = 0;
+
+        for (int i = 0; i < graph->numVertex - 1; i++) {
+            int u = extractMin(graph->numVertex, distance, visited, src);
+            if (u == -1) { // no min node to explore
+                break;
+            }
+            visited[src * graph->numVertex + u] = true;
+            struct AdjacencyListNode* neighbor = graph->neighbors[u].head;
+            while (neighbor != NULL) {
+                if (!visited[src * graph->numVertex + neighbor->dest] && (distance[src * graph->numVertex + u] + neighbor->cost) < distance[src * graph->numVertex + neighbor->dest]) {
+                    parent[src * graph->numVertex + neighbor->dest] = u;
+                    distance[src * graph->numVertex + neighbor->dest] = distance[src * graph->numVertex + u] + neighbor->cost;
+                }
+            }
+        }
+    }
+}
+
+
+//int main() {
+//    int h_numVertex = 3000;
+//
+//    int* h_costMatrix = (int*)malloc(h_numVertex * h_numVertex * sizeof(int));
+//    if (h_costMatrix == NULL) {
+//        cout << "malloc failed" << endl;
+//    }
+//    fill(h_costMatrix, h_costMatrix + h_numVertex * h_numVertex, INF);
+//
+//    fileToCostMatrix(string("nyc-d.txt"), h_numVertex, h_costMatrix);
+//
+//    int* h_parent = (int*)malloc(h_numVertex * h_numVertex * sizeof(int));
+//    int* h_distance = (int*)malloc(h_numVertex * h_numVertex * sizeof(int));
+//    bool* h_visited = (bool*)malloc(h_numVertex * h_numVertex * sizeof(bool));
+//
+//    fill(h_parent, h_parent + h_numVertex * h_numVertex, -1);
+//    fill(h_distance, h_distance + h_numVertex * h_numVertex, INF);
+//    fill(h_visited, h_visited + h_numVertex * h_numVertex, false);
+//
+//    const int bytesNumVertex = sizeof(int);
+//    const int bytesCostMatrix = h_numVertex * h_numVertex * sizeof(int);
+//
+//    int* d_costMatrix;
+//    int* d_parent;
+//    int* d_distance;
+//    bool* d_visited;
+//
+//    cudaCheck(cudaMalloc((void**)&d_costMatrix, bytesCostMatrix));
+//    cudaCheck(cudaMalloc((void**)&d_parent, bytesCostMatrix));
+//    cudaCheck(cudaMalloc((void**)&d_distance, bytesCostMatrix));
+//    cudaCheck(cudaMalloc((void**)&d_visited, bytesCostMatrix));
+//
+//    cudaCheck(cudaMemcpy(d_costMatrix, h_costMatrix, bytesCostMatrix, cudaMemcpyHostToDevice));
+//    cudaCheck(cudaMemcpy(d_parent, h_parent, bytesCostMatrix, cudaMemcpyHostToDevice));
+//    cudaCheck(cudaMemcpy(d_distance, h_distance, bytesCostMatrix, cudaMemcpyHostToDevice));
+//    cudaCheck(cudaMemcpy(d_visited, h_visited, bytesCostMatrix, cudaMemcpyHostToDevice));
+//
+//    dijkstra<<<(h_numVertex-1)/THREADS_PER_BLOCK+1, THREADS_PER_BLOCK>>>(h_numVertex, d_costMatrix, d_visited, d_distance, d_parent);
+//
+//    cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
+//    cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
+//    
+//    printPathAPSP(h_numVertex, h_distance, h_parent);
+//
+//}
+
+/* test case 1
+int h_costMatrix[6][6] = {
         {INF, 1, 5, INF, INF, INF},
         {INF, INF, 2, 2, 1, INF},
         {INF, INF, INF, INF, 2, INF},
@@ -58,38 +127,4 @@ int main() {
         {INF, INF, INF, INF, INF, 2},
         {INF, INF, INF, INF, INF, INF},
     };
-
-    int* h_parent = (int*)malloc(h_numVertex * h_numVertex * sizeof(int));
-    int* h_distance = (int*)malloc(h_numVertex * h_numVertex * sizeof(int));
-    bool* h_visited = (bool*)malloc(h_numVertex * h_numVertex * sizeof(bool));
-
-    fill(h_parent, h_parent + h_numVertex * h_numVertex, -1);
-    fill(h_distance, h_distance + h_numVertex * h_numVertex, INF);
-    fill(h_visited, h_visited + h_numVertex * h_numVertex, false);
-
-    const int bytesNumVertex = sizeof(int);
-    const int bytesCostMatrix = h_numVertex * h_numVertex * sizeof(int);
-
-    int* d_costMatrix;
-    int* d_parent;
-    int* d_distance;
-    bool* d_visited;
-
-    cudaCheck(cudaMalloc((void**)&d_costMatrix, bytesCostMatrix));
-    cudaCheck(cudaMalloc((void**)&d_parent, bytesCostMatrix));
-    cudaCheck(cudaMalloc((void**)&d_distance, bytesCostMatrix));
-    cudaCheck(cudaMalloc((void**)&d_visited, bytesCostMatrix));
-
-    cudaCheck(cudaMemcpy(d_costMatrix, h_costMatrix, bytesCostMatrix, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_parent, h_parent, bytesCostMatrix, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_distance, h_distance, bytesCostMatrix, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_visited, h_visited, bytesCostMatrix, cudaMemcpyHostToDevice));
-
-    dijkstra<<<(h_numVertex-1)/THREADS_PER_BLOCK+1, THREADS_PER_BLOCK>>>(h_numVertex, d_costMatrix, d_visited, d_distance, d_parent);
-
-    cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
-    cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
-    
-    printPathAPSP(h_numVertex, h_distance, h_parent);
-}
 */
