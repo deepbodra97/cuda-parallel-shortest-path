@@ -90,6 +90,20 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
     }
 }
 
+void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<int>& vertices, vector<int>& indices, vector<int>& edges, vector<int>& weights) {
+    int index = 0;
+    indices.push_back(index);
+    for (auto uIter = adjacencyList.begin(); uIter != adjacencyList.end(); ++uIter) {
+        int u = uIter->first;
+        vertices.push_back(u);
+        index += uIter->second.size();
+        indices.push_back(index);
+        for (auto vIter = uIter->second.begin(); vIter != uIter->second.end(); ++vIter) {
+            edges.push_back(vIter->first);
+            weights.push_back(vIter->second);
+        }
+    }
+}
 
 void printPathSSSP(int numVertex, int* distance, int* parent) {
     cout << "Node\tCost\tPath" << endl;

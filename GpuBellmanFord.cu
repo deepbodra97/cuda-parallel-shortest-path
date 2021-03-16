@@ -65,4 +65,12 @@ int main() {
 
     fileToAdjacencyList(string("nyc-d.txt"), adjacencyList, numVertex, numEdges);
     // cout << adjacencyList.size() << " " << numVertex << " " << numEdges << endl;
+    vector<int> vertices, indices, edges, weights;
+    /*vertices.reserve(numVertex);
+    indices.reserve(numVertex + 1);
+    edges.reserve(numEdges);
+    weights.reserve(numEdges);*/
+    adjacencyListToCSR(adjacencyList, vertices, indices, edges, weights);
+    /*for (auto i : weights)
+        std::cout << i << ' ';*/
 }
