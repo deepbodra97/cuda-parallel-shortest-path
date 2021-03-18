@@ -105,6 +105,13 @@ void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<in
     }
 }
 
+void validateDistance(int numVertex, int* exp_distance, int* distance) {
+    for (int i = 0; i < numVertex; i++) {
+        assert(exp_distance[i] == distance[i]);
+    }
+    cout << "Validation Successful" << endl;
+}
+
 void printPathSSSP(int numVertex, int* distance, int* parent) {
     cout << "Node\tCost\tPath" << endl;
     for (int i = 0; i < numVertex; i++) {

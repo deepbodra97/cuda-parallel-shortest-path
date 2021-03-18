@@ -22,25 +22,25 @@ void bellmanFord(int numVertex, int src, int* costMatrix, int* distance, int* pa
     }
 }
 
-void bellmanFord(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
-    distance[src] = 0;
-
-    for (int k = 0; k < numVertex - 1; k++) {
-        cout << "k=" << k << " ";
-        for (int i = 0; i < numVertex; i++) {
-            // int u = vertices[i];
-            for (int j = indices[i]; j < indices[i+1]; j++) {
-                int v = edges[j];
-                int w = weights[j];
-
-;               if (distance[i] != INF && (distance[i] + w) < distance[v]) {
-                    parent[v] = i;
-                    distance[v] = distance[i] + w;
-                }
-            }
-        }
-    }
-}
+//void bellmanFord(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
+//    distance[src] = 0;
+//
+//    for (int k = 0; k < numVertex - 1; k++) {
+//        cout << "k=" << k << " ";
+//        for (int i = 0; i < numVertex; i++) {
+//            // int u = vertices[i];
+//            for (int j = indices[i]; j < indices[i+1]; j++) {
+//                int v = edges[j];
+//                int w = weights[j];
+//
+//;               if (distance[i] != INF && (distance[i] + w) < distance[v]) {
+//                    parent[v] = i;
+//                    distance[v] = distance[i] + w;
+//                }
+//            }
+//        }
+//    }
+//}
 
 
 //int main() {

@@ -9,6 +9,25 @@
 
 using namespace std;
 
+void bellmanFord(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
+    distance[src] = 0;
+
+    for (int k = 0; k < numVertex - 1; k++) {
+        for (int i = 0; i < numVertex; i++) {
+            // int u = vertices[i];
+            for (int j = indices[i]; j < indices[i + 1]; j++) {
+                int v = edges[j];
+                int w = weights[j];
+
+                ;               if (distance[i] != INF && (distance[i] + w) < distance[v]) {
+                    parent[v] = i;
+                    distance[v] = distance[i] + w;
+                }
+            }
+        }
+    }
+}
+
 __global__
 void bellmanFordRelax(int numVertex, int* vertices, int* indices, int* edges, int* weights, int* prev_distance, int* distance, int* parent) {
 
@@ -20,7 +39,7 @@ void bellmanFordRelax(int numVertex, int* vertices, int* indices, int* edges, in
             int w = weights[j];
 
             if (prev_distance[tid] != INF && (prev_distance[tid] + w) < prev_distance[v]) {
-                //parent[v] = i; // atomic
+                // parent[v] = i; // atomic
                 atomicMin(&distance[v], prev_distance[tid] + w);
             }
         }
@@ -105,8 +124,8 @@ int main() {
     /*for (auto i : weights)
         std::cout << i << ' ';*/
 
-     int numVertex = 6, numEdges = 9;
-     vector<int> vertices = { 0, 1, 2, 3, 4, 5 }, indices = { 0, 2, 5, 6, 8, 9 }, edges = { 1, 2, 2, 3, 4, 4, 4, 5, 5 }, weights = { 1,5,2,2,1,2,3,1,2 };
+    int numVertex = 6, numEdges = 9;
+    vector<int> vertices = { 0, 1, 2, 3, 4, 5 }, indices = { 0, 2, 5, 6, 8, 9 }, edges = { 1, 2, 2, 3, 4, 4, 4, 5, 5 }, weights = { 1,5,2,2,1,2,3,1,2 };
     /*int numVertex, numEdges;
     vector<int> vertices, indices, edges, weights;
     map<int, list< pair<int, int > > > adjacencyList;    
@@ -115,14 +134,22 @@ int main() {
 
     int src = 0;
 
+    int* exp_parent = (int*)malloc(numVertex * sizeof(int));
+    int* exp_distance = (int*)malloc(numVertex * sizeof(int));
+
+    fill(exp_distance, exp_distance + numVertex, INF);
+    fill(exp_parent, exp_parent + numVertex, -1);
+
+    bellmanFord(src, numVertex, vertices.data(), indices.data(), edges.data(), weights.data(), exp_distance, exp_parent);
+
     int* parent = (int*)malloc(numVertex * sizeof(int));
     int* prev_distance = (int*)malloc(numVertex * sizeof(int));
     int* distance = (int*)malloc(numVertex * sizeof(int));
-
     
     fill(prev_distance, prev_distance + numVertex, INF);
     fill(distance, distance + numVertex, INF);
     fill(parent, parent + numVertex, -1);
+
 
     prev_distance[src] = 0;
     distance[src] = 0;
@@ -156,10 +183,12 @@ int main() {
     for (int k = 0; k < numVertex - 1; k++) {
         bellmanFordRelax<<<(numVertex-1)/THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK>>>(numVertex, d_vertices, d_indices, d_edges, d_weights, d_prev_distance, d_distance, d_parent);
     }
-    bellmanFordParent << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, d_vertices, d_indices, d_edges, d_weights, d_distance, d_parent);
+    bellmanFordParent <<<(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >>> (numVertex, d_vertices, d_indices, d_edges, d_weights, d_distance, d_parent);
 
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    validateDistance(numVertex, exp_distance, distance);
 
     printPathSSSP(numVertex, distance, parent);
 }
