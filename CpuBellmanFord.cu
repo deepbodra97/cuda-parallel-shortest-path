@@ -26,15 +26,16 @@ void bellmanFord(int src, int numVertex, int* vertices, int* indices, int* edges
     distance[src] = 0;
 
     for (int k = 0; k < numVertex - 1; k++) {
+        cout << "k=" << k << " ";
         for (int i = 0; i < numVertex; i++) {
-            int u = vertices[i];
+            // int u = vertices[i];
             for (int j = indices[i]; j < indices[i+1]; j++) {
                 int v = edges[j];
                 int w = weights[j];
 
-;               if (distance[i] != INF && (distance[u] + w) < distance[v]) {
-                    parent[v] = u;
-                    distance[v] = distance[u] + w;
+;               if (distance[i] != INF && (distance[i] + w) < distance[v]) {
+                    parent[v] = i;
+                    distance[v] = distance[i] + w;
                 }
             }
         }
@@ -120,11 +121,12 @@ int main() {
     
     fileToAdjacencyList(string("nyc-d.txt"), adjacencyList, numVertex, numEdges);
 
+    // vector<int> vertices = { 0, 1, 2, 3, 4, 5 }, indices = { 0, 2, 5, 6, 8, 9 }, edges = { 1, 2, 2, 3, 4, 4, 4, 5, 5 }, weights = { 1,5,2,2,1,2,3,1,2 };
     vector<int> vertices, indices, edges, weights;
-    vertices.reserve(numVertex);
+    /*vertices.reserve(numVertex);
     indices.reserve(numVertex + 1);
     edges.reserve(numEdges);
-    weights.reserve(numEdges);
+    weights.reserve(numEdges);*/
 
     adjacencyListToCSR(adjacencyList, vertices, indices, edges, weights);
     
@@ -133,7 +135,13 @@ int main() {
 
     fill(distance, distance + numVertex, INF);
     fill(parent, parent + numVertex, -1);
+    cout << "before" << endl;
+
+    /*for (int i = 0; i < numEdges; i++) {
+        std::cout << weights[i] << ' ';
+    }*/
 
     bellmanFord(src, numVertex, vertices.data(), indices.data(), edges.data(), weights.data(), distance, parent);
+    cout << "after" << endl;
     printPathSSSP(numVertex, distance, parent);
 }
