@@ -9,7 +9,8 @@
 #include <map>
 #include <sstream>
 
-#define INF INT_MAX	
+#define INF INT_MAX
+#define THREADS_PER_BLOCK 1024
 
 using namespace std;
 
