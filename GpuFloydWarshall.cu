@@ -28,8 +28,20 @@ void floydWarshall(int numVertex, int* distance, int* parent) {
 }
 
 __global__
-void floydWarshallNaive() {
+void floydWarshallNaive(int numVertex, int k, int* distance, int* parent) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < numVertex) {
+        for (int j = 0; j < numVertex; j++) {
+            int itoj = i * numVertex + j;
+            int itok = i * numVertex + k;
+            int ktoj = k * numVertex + j;
 
+            if (distance[itok] != INF && distance[ktoj] != INF && distance[itoj] > distance[itok] + distance[ktoj]) {
+                parent[itoj] = k;
+                distance[itoj] = distance[itok] + distance[ktoj];
+            }
+        }
+    }
 }
 
 int main() {
@@ -67,11 +79,27 @@ int main() {
         }
     }
 
-    floydWarshall(numVertex, distance, parent);
+    // floydWarshall(numVertex, distance, parent);
+
+    int* d_distance;
+    int* d_parent;
+
+    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
+
+    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+
+    for(int k=0; k<numVertex; k++){
+        floydWarshallNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
+    }
+
+    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
 
     for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
-            cout<<parent[i * numVertex + j] << " ";
+            cout<<distance[i * numVertex + j] << " ";
         }
         cout << endl;
     }
