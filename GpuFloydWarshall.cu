@@ -44,6 +44,67 @@ void floydWarshallNaive(int numVertex, int k, int* distance, int* parent) {
     }
 }
 
+__global__
+void floydWarshallOptimized(int numVertex, int k, int* distance, int* parent) {//G will be the adjacency matrix, P will be path matrix
+    int i = blockIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (j < numVertex){
+        int itoj = numVertex * i + j;
+        int itok = numVertex * i + k;
+        int ktoj = numVertex * k + j;
+
+        __shared__ int dist_itok;
+        if (threadIdx.x == 0){
+            dist_itok = distance[itok];
+        }
+        __syncthreads();
+
+        if (dist_itok != INF && distance[ktoj] != INF && distance[itoj] > dist_itok + distance[ktoj]) {
+            distance[itoj] = dist_itok + distance[ktoj];
+            parent[itoj] = k;
+        }
+    }
+}
+
+void runFloydWarshallNaive(int numVertex, int* distance, int* parent) {
+    int* d_distance;
+    int* d_parent;
+
+    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
+
+    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+
+    for (int k = 0; k < numVertex; k++) {
+        floydWarshallNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
+    }
+
+    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+}
+
+void runFloydWarshallOptimized(int numVertex, int* distance, int* parent) {
+    int* d_distance;
+    int* d_parent;
+
+    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
+
+    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+
+    dim3 dimGrid((numVertex - 1) / THREADS_PER_BLOCK + 1, numVertex);
+
+    for (int k = 0; k < numVertex; k++) {
+        floydWarshallOptimized << <dimGrid, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
+    }
+
+    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+}
+
 int main() {
     int h_costMatrix[] = { 
         INF, 1, 5, INF, INF, INF,
@@ -81,21 +142,9 @@ int main() {
 
     // floydWarshall(numVertex, distance, parent);
 
-    int* d_distance;
-    int* d_parent;
-
-    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
-    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
-
-    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
-
-    for(int k=0; k<numVertex; k++){
-        floydWarshallNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
-    }
-
-    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
-    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    // runFloydWarshallNaive(numVertex, distance, parent);
+    
+    runFloydWarshallOptimized(numVertex, distance, parent);
 
     for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
