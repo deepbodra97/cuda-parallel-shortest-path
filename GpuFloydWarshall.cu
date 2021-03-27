@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void floydWarshall(int numVertex, int* costMatrix, int* distance, int* parent) {
+void floydWarshall(int numVertex, int* distance, int* parent) {
 
     for (int k = 0; k < numVertex; k++) {
         for (int i = 0; i < numVertex; i++) {
@@ -18,13 +18,18 @@ void floydWarshall(int numVertex, int* costMatrix, int* distance, int* parent) {
                 int itok = i * numVertex + k;
                 int ktoj = k * numVertex + j;
 
-                if (costMatrix[itok] != INF && costMatrix[ktoj] != INF && costMatrix[itoj] > costMatrix[itok] + costMatrix[ktoj]) {
+                if (distance[itok] != INF && distance[ktoj] != INF && distance[itoj] > distance[itok] + distance[ktoj]) {
                     parent[itoj] = k;
-                    costMatrix[itoj] = costMatrix[itok] + costMatrix[ktoj];
+                    distance[itoj] = distance[itok] + distance[ktoj];
                 }
             }
         }
     }
+}
+
+__global__
+void floydWarshallNaive() {
+
 }
 
 int main() {
@@ -39,21 +44,34 @@ int main() {
 
     int numVertex = 6;
 
-    for (int i = 0; i < numVertex; i++) {
-        h_costMatrix[i * numVertex + i] = 0;
-    }
-
     int* parent = (int*)malloc(numVertex * numVertex * sizeof(int));
     int* distance = (int*)malloc(numVertex * numVertex * sizeof(int));
 
-    fill(parent, parent + numVertex * numVertex, -1);
-    fill(distance, distance + numVertex * numVertex, INF);
+    // fill(parent, parent + numVertex * numVertex, -1);
+    // fill(distance, distance + numVertex * numVertex, INF);
 
-    floydWarshall(numVertex, h_costMatrix, distance, parent);
+    for (int i = 0; i < numVertex; i++) {
+        for(int j = 0; j < numVertex; j++){
+            if (i == j) {
+                distance[i * numVertex + j] = 0;
+                parent[i * numVertex + j] = -1;
+            }
+            else if (h_costMatrix[i * numVertex + j] == INF) {
+                distance[i * numVertex + j] = INF;
+                parent[i * numVertex + j] = -1;
+            }
+            else {
+                distance[i * numVertex + j] = h_costMatrix[i * numVertex + j];
+                parent[i * numVertex + j] = i;
+            }
+        }
+    }
+
+    floydWarshall(numVertex, distance, parent);
 
     for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
-            cout<<h_costMatrix[i * numVertex + j] << " ";
+            cout<<parent[i * numVertex + j] << " ";
         }
         cout << endl;
     }
