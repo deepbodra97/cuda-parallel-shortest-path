@@ -67,7 +67,7 @@ struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
 }
 
 void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges) {
-    cout << "fileToCostMatrix" << endl;
+    cout << "Reading input file" << endl;
     ifstream file(filename);
     string line;
     /*int skip = 8;
@@ -88,6 +88,7 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
         // cout <<"error"<< src << " " << dest << endl;
         adjacencyList[src].push_back(make_pair(dest, cost));
     }
+    cout << "Finished reading input file" << endl;
 }
 
 void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<int>& vertices, vector<int>& indices, vector<int>& edges, vector<int>& weights) {
