@@ -9,6 +9,8 @@
 
 using namespace std;
 
+#define TILE_DIM 3
+
 void floydWarshall(int numVertex, int* distance, int* parent) {
 
     for (int k = 0; k < numVertex; k++) {
@@ -67,6 +69,90 @@ void floydWarshallOptimized(int numVertex, int k, int* distance, int* parent) {/
     }
 }
 
+__global__
+void floydWarshallTiledPhase1(int numVertex, int primary_tile_number, int* distance, int* parent) {
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+
+    int i = primary_tile_number * blockDim.y + threadIdx.y;
+    int j = primary_tile_number * blockDim.x + threadIdx.x;
+    int itoj = i * numVertex + j;
+    for (int k = 0; k < TILE_DIM; k++) {
+        if (distance[itoj - tx + k] != INF && distance[itoj - ty * numVertex + k * numVertex] != INF &&
+            distance[itoj] > distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex]) {
+
+            distance[itoj] = distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex];
+        }
+        __syncthreads();
+    }
+}
+
+__global__
+void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* distance, int* parent) {
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+
+    int i, j;
+
+    // 1st row of blocks for columns
+    if (blockIdx.y == 0 && blockIdx.x != primary_tile_number) {
+        i = blockIdx.x * blockDim.y + threadIdx.y;
+        j = primary_tile_number * blockDim.x + threadIdx.x;
+        int itoj = i * numVertex + j;
+        for (int k = 0; k < TILE_DIM; k++) {
+            if (distance[itoj - tx + k] != INF &&
+                distance[itoj - (ty - k) * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex] != INF &&
+                distance[itoj] > distance[itoj - tx + k]
+                + distance[itoj - (ty - k) * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex]) {
+
+                distance[itoj] = distance[itoj - tx  + k] + distance[itoj - ty * numVertex + k * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex];
+
+            }
+            __syncthreads();
+        }
+    }
+
+    // 2nd row of blocks for rows
+    if (blockIdx.y == 1 && blockIdx.x != primary_tile_number) {
+        i = primary_tile_number * blockDim.y + threadIdx.y;
+        j = blockIdx.x * blockDim.x + threadIdx.x;
+        int itoj = i * numVertex + j;
+        for (int k = 0; k < TILE_DIM; k++) {
+            if (distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] != INF &&
+                distance[itoj - ty * numVertex + k * numVertex] != INF &&
+                distance[itoj] > distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x]
+                + distance[itoj - ty * numVertex + k * numVertex]) {
+
+                distance[itoj] = distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] + distance[itoj - ty * numVertex + k * numVertex];
+            }
+            __syncthreads();
+        }
+    }
+}
+
+__global__
+void floydWarshallTiledPhase3(int numVertex, int primary_tile_number, int* distance, int* parent) {
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int itoj = i * numVertex + j;
+    if ((blockIdx.x != primary_tile_number) && (blockIdx.y != primary_tile_number)) { 
+        for (int k = 0; k < TILE_DIM; k++) {
+            if (distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] != INF &&
+                distance[itoj - ty * numVertex + k * numVertex - (blockIdx.y - primary_tile_number) * blockDim.y * numVertex] != INF &&
+                distance[itoj] > distance[itoj - (tx - k) - (blockIdx.x - primary_tile_number) * blockDim.x]
+                + distance[itoj - (ty - k) * numVertex - (blockIdx.y - primary_tile_number) * blockDim.y * numVertex]) {
+                
+                distance[itoj] = distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] + distance[itoj - ty * numVertex + k * numVertex - (blockIdx.y - primary_tile_number) * blockDim.y * numVertex];
+            }
+        }
+    }
+}
+
+
+
+
 void runFloydWarshallNaive(int numVertex, int* distance, int* parent) {
     int* d_distance;
     int* d_parent;
@@ -101,6 +187,35 @@ void runFloydWarshallOptimized(int numVertex, int* distance, int* parent) {
         floydWarshallOptimized << <dimGrid, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
     }
 
+    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+}
+
+void runFloydWarshallTiled(int numVertex, int* distance, int* parent) {
+    int* d_distance;
+    int* d_parent;
+
+    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
+
+    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+
+    int numDiagonalTiles = (numVertex - 1) / TILE_DIM + 1;
+
+    dim3 dimGridPhase1(1, 1), dimGridPhase2(numDiagonalTiles, 2), dimGridPhase3(numDiagonalTiles, numDiagonalTiles);
+    dim3 dimBlock(TILE_DIM, TILE_DIM);
+
+    for (int k = 0; k < numDiagonalTiles; k++) {
+        floydWarshallTiledPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
+        cudaThreadSynchronize();
+        floydWarshallTiledPhase2 << <  dimGridPhase2, dimBlock >> > (numVertex, k, d_distance, d_parent);
+        cudaThreadSynchronize();
+        floydWarshallTiledPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
+        cudaThreadSynchronize();
+
+        
+    }
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
 }
@@ -144,7 +259,9 @@ int main() {
 
     // runFloydWarshallNaive(numVertex, distance, parent);
     
-    runFloydWarshallOptimized(numVertex, distance, parent);
+    // runFloydWarshallOptimized(numVertex, distance, parent);
+
+    runFloydWarshallTiled(numVertex, distance, parent);
 
     for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
