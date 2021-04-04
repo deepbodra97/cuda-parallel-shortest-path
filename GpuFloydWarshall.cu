@@ -388,6 +388,11 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
 }
 
 int main() {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    float duration;
     /*int h_costMatrix[] = { 
         INF, 1, 5, INF, INF, INF,
         INF, INF, 2, 2, 1, INF,
@@ -399,17 +404,8 @@ int main() {
 
     int numVertex = 6;*/
 
-    int numVertex = 10876, numEdges;
-    int* h_costMatrix = (int*)malloc(numVertex * numVertex * sizeof(int));
-    if (h_costMatrix == NULL) {
-        cout << "malloc failed" << endl;
-    }
-    else {
-        cout << h_costMatrix << endl;
-    }
-    fill(h_costMatrix, h_costMatrix + numVertex * numVertex, INF);
-
-    fileToCostMatrix(string("../gnutella04.txt"), h_costMatrix, numVertex, numEdges);
+    int numVertex, numEdges;
+    int* h_costMatrix = fileToCostMatrix(string("../gnutella04.txt"), numVertex, numEdges);
 
     int* parent = (int*)malloc(numVertex * numVertex * sizeof(int));
     int* distance = (int*)malloc(numVertex * numVertex * sizeof(int));
@@ -435,15 +431,22 @@ int main() {
     }
 
     // floydWarshall(numVertex, distance, parent);
-    runFloydWarshallNaive(numVertex, distance, parent);
+    // runFloydWarshallNaive(numVertex, distance, parent);
     // runFloydWarshallOptimized(numVertex, distance, parent);
     // runFloydWarshallTiled(numVertex, distance, parent);
-    // runFloydWarshallTiledShared(numVertex, distance, parent);
 
-    /*for (int i = 0; i < numVertex; i++) {
+    cudaEventRecord(start, 0);
+    runFloydWarshallTiledShared(numVertex, distance, parent);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(start);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout<<"tiled floyd warshall with shared memory "<< duration;
+
+    for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
             cout<<distance[i * numVertex + j] << " ";
         }
         cout << endl;
-    }*/
+    }
 }

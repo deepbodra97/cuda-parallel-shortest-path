@@ -8,8 +8,8 @@ void splitBySpaceToVector(const string& line, vector<string>& tokens) {
     }
 }
 
-void fileToCostMatrix(string filename, int* costMatrix, int& numVertex, int& numEdges) {
-    cout << "fileToCostMatrix"<<endl;
+int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
+    cout << "Reading input file" << endl;
     ifstream file(filename);
     string line;
     /*int skip = 8;
@@ -22,6 +22,13 @@ void fileToCostMatrix(string filename, int* costMatrix, int& numVertex, int& num
 
     splitBySpaceToVector(line, tokens);
     numVertex = stoi(tokens[0]), numEdges = stoi(tokens[1]);
+
+    int* costMatrix = (int*)malloc(numVertex * numVertex * sizeof(int));
+    if (costMatrix == NULL) {
+        cout << "malloc failed" << endl;
+    }
+    fill(costMatrix, costMatrix + numVertex * numVertex, INF);
+
     while (getline(file, line)) {
         stringstream linestream(line);
         vector<string> tokens;
@@ -30,10 +37,11 @@ void fileToCostMatrix(string filename, int* costMatrix, int& numVertex, int& num
             tokens.push_back(token);
         }
         int src = stoi(tokens[0]), dest = stoi(tokens[1]), cost = stoi(tokens[2]);
-        cout <<"error"<< src << " " << dest << endl;
+        // cout <<"error"<< src << " " << dest << endl;
         costMatrix[src * numVertex + dest] = cost;
     }
     cout << "Finished reading input file" << endl;
+    return costMatrix;
 }
 
 struct AdjacencyListNode* newAdjacencyListNode(int dest, int weight) {
