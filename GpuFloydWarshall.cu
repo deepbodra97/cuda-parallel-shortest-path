@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define TILE_DIM 3
+#define TILE_DIM 32
 
 void floydWarshall(int numVertex, int* distance, int* parent) {
 
@@ -171,7 +171,7 @@ __global__ void floydWarshallTiledSharedPhase1(int numVertex, int primary_tile_n
     
     __syncthreads();
 
-    // #pragma unroll
+    #pragma unroll
     for (int k = 0; k < TILE_DIM; k++) {
         __syncthreads();
         if (s_distance[ty][k] != INF &&
@@ -211,7 +211,7 @@ __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_n
 
         shortestDistance = s_distanceCurrentTile[threadIdx.y][threadIdx.x];
 
-// #pragma unroll
+#pragma unroll
         for (int k = 0; k < TILE_DIM; k++) {
             int newDistance = s_distancePrimaryTile[threadIdx.y][k] + s_distanceCurrentTile[k][threadIdx.x];
             // __syncthreads();
@@ -232,7 +232,7 @@ __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_n
 
         shortestDistance = s_distanceCurrentTile[threadIdx.y][threadIdx.x];
 
-// #pragma unroll
+#pragma unroll
         for (int k = 0; k < TILE_DIM; k++) {
             int newDistance = s_distanceCurrentTile[threadIdx.y][k] + s_distancePrimaryTile[k][threadIdx.x];
             // __syncthreads();
@@ -277,7 +277,7 @@ __global__ void floydWarshallTiledSharedPhase3(int numVertex, int primary_tile_n
 
     int shortestDist = s_distanceCurrentTile[threadIdx.y][threadIdx.x];
 
-// #pragma unroll
+#pragma unroll
     for (int k = 0; k < TILE_DIM; k++) {
         int newDistance = s_distancePrimaryCol[threadIdx.y][k] + s_distancePrimaryRow[k][threadIdx.x];
         if (s_distancePrimaryCol[threadIdx.y][k] != INF &&
@@ -304,6 +304,7 @@ void runFloydWarshallNaive(int numVertex, int* distance, int* parent) {
 
     for (int k = 0; k < numVertex; k++) {
         floydWarshallNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
+        cudaDeviceSynchronize();
     }
 
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
@@ -347,11 +348,11 @@ void runFloydWarshallTiled(int numVertex, int* distance, int* parent) {
 
     for (int k = 0; k < numDiagonalTiles; k++) {
         floydWarshallTiledPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
         floydWarshallTiledPhase2 << <  dimGridPhase2, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
         floydWarshallTiledPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
     }
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
@@ -374,20 +375,20 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
     dim3 dimBlock(TILE_DIM, TILE_DIM);
 
     for (int k = 0; k < numDiagonalTiles; k++) {
-
+        cout << "Phase number " << k << endl;
         floydWarshallTiledSharedPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
         floydWarshallTiledSharedPhase2 << <  dimGridPhase2, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
         floydWarshallTiledSharedPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
     }
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
 }
 
 int main() {
-    int h_costMatrix[] = { 
+    /*int h_costMatrix[] = { 
         INF, 1, 5, INF, INF, INF,
         INF, INF, 2, 2, 1, INF,
         INF, INF, INF, INF, 2, INF,
@@ -396,7 +397,19 @@ int main() {
         INF, INF, INF, INF, INF, INF,
     };
 
-    int numVertex = 6;
+    int numVertex = 6;*/
+
+    int numVertex = 10876, numEdges;
+    int* h_costMatrix = (int*)malloc(numVertex * numVertex * sizeof(int));
+    if (h_costMatrix == NULL) {
+        cout << "malloc failed" << endl;
+    }
+    else {
+        cout << h_costMatrix << endl;
+    }
+    fill(h_costMatrix, h_costMatrix + numVertex * numVertex, INF);
+
+    fileToCostMatrix(string("../gnutella04.txt"), h_costMatrix, numVertex, numEdges);
 
     int* parent = (int*)malloc(numVertex * numVertex * sizeof(int));
     int* distance = (int*)malloc(numVertex * numVertex * sizeof(int));
@@ -422,15 +435,15 @@ int main() {
     }
 
     // floydWarshall(numVertex, distance, parent);
-    // runFloydWarshallNaive(numVertex, distance, parent);
+    runFloydWarshallNaive(numVertex, distance, parent);
     // runFloydWarshallOptimized(numVertex, distance, parent);
     // runFloydWarshallTiled(numVertex, distance, parent);
-    runFloydWarshallTiledShared(numVertex, distance, parent);
+    // runFloydWarshallTiledShared(numVertex, distance, parent);
 
-    for (int i = 0; i < numVertex; i++) {
+    /*for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
             cout<<distance[i * numVertex + j] << " ";
         }
         cout << endl;
-    }
+    }*/
 }

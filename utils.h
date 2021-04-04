@@ -11,6 +11,8 @@
 
 #include <cassert>
 
+#include <limits.h>
+
 #define INF INT_MAX
 #define THREADS_PER_BLOCK 1024
 
@@ -31,7 +33,7 @@ struct Graph {
 	struct AdjacencyList* neighbors;
 };
 
-void fileToCostMatrix(string filename, int numVertex, int* costMatrix);
+void fileToCostMatrix(string filename, int* costMatrix, int& numVertex, int& numEdges);
 struct Graph* fileToAdjacencyList(string filename, struct Graph* costMatrix);
 void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges);
 

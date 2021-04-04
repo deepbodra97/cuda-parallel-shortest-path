@@ -19,7 +19,7 @@ void bellmanFord(int src, int numVertex, int* vertices, int* indices, int* edges
                 int v = edges[j];
                 int w = weights[j];
 
-                ;               if (distance[i] != INF && (distance[i] + w) < distance[v]) {
+                if (distance[i] != INF && (distance[i] + w) < distance[v]) {
                     parent[v] = i;
                     distance[v] = distance[i] + w;
                 }
