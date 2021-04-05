@@ -172,3 +172,29 @@ void printPathAPSP(int numVertex, int* distance, int* parent) {
         cout << endl;
     }
 }
+
+void writeOutPathAPSP(string filepath, int numVertex, int* distance, int* parent) {
+    ofstream out(filepath);
+    for (int src = 0; src < numVertex; src++) {
+        out << "Source: " << src << endl;
+        out << "Node\tCost\tPath" << endl;
+        for (int i = 0; i < numVertex; i++) {
+            if (distance[src * numVertex + i] != INF) {
+                out << i << "\t" << distance[src * numVertex + i] << "\t";
+                out << i;
+
+                int tmp = parent[src * numVertex + i];
+                while (tmp != -1)
+                {
+                    out << "<-" << tmp;
+                    tmp = parent[src * numVertex + tmp];
+                }
+            }
+            else {
+                out << i << "\t" << "NA" << "\t" << "-";
+            }
+            out << endl;
+        }
+        out << endl;
+    }
+}

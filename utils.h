@@ -44,4 +44,6 @@ void validateDistance(int numVertex, int* exp_distance, int* distance);
 void printPathSSSP(int numVertex, int* distance, int* parent);
 void printPathAPSP(int numVertex, int* distance, int* parent);
 
+void writeOutPathAPSP(string filepath, int numVertex, int* distance, int* parent);
+
 #endif
