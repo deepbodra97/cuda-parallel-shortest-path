@@ -39,6 +39,8 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
 
 void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<int>& vertices, vector<int>& indices, vector<int>& edges, vector<int>& weights);
 
+void APSPInitDistanceParent(int numVertex, int* costMatrix, int* distance, int* parent);
+
 void validateDistance(int numVertex, int* exp_distance, int* distance);
 
 void printPathSSSP(int numVertex, int* distance, int* parent);

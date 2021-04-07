@@ -11,8 +11,14 @@ using namespace std;
 
 #define TILE_DIM 32
 
-void floydWarshall(int numVertex, int* distance, int* parent) {
+void runCpuFloydWarshall(int numVertex, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+    cudaEventRecord(start, 0);
 
+    cout << "running the algorithm on CPU" << endl;
     for (int k = 0; k < numVertex; k++) {
         for (int i = 0; i < numVertex; i++) {
             for (int j = 0; j < numVertex; j++) {
@@ -25,6 +31,27 @@ void floydWarshall(int numVertex, int* distance, int* parent) {
                     distance[itoj] = distance[itok] + distance[ktoj];
                 }
             }
+        }
+    }
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
+}
+
+__global__
+void floydWarshallSuperNaive(int numVertex, int k, int* distance, int* parent) {
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < numVertex && j < numVertex) {
+        int itoj = i * numVertex + j;
+        int itok = i * numVertex + k;
+        int ktoj = k * numVertex + j;
+
+        if (distance[itok] != INF && distance[ktoj] != INF && distance[itoj] > distance[itok] + distance[ktoj]) {
+            parent[itoj] = k;
+            distance[itoj] = distance[itok] + distance[ktoj];
         }
     }
 }
@@ -307,53 +334,137 @@ __global__ void floydWarshallTiledSharedPhase3(int numVertex, int primary_tile_n
     distance[i * numVertex + j] = shortestDist;
 }
 
+void runFloydWarshallSuperNaive(int numVertex, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
 
-void runFloydWarshallNaive(int numVertex, int* distance, int* parent) {
+    cudaEventRecord(start, 0);
+
     int* d_distance;
     int* d_parent;
 
+    // allocate memory on GPU and copy data from CPU to GPU
+    cout << "allocating data on GPU" << endl;
     cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
     cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
 
+    cout << "copying data to GPU" << endl;
     cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
 
+    // run kernel
+    cout << "Kernel is executing" << endl;
+    for (int k = 0; k < numVertex; k++) {
+        floydWarshallSuperNaive << <(numVertex - 1) / TILE_DIM + 1, (numVertex - 1) / TILE_DIM + 1 >> > (numVertex, k, d_distance, d_parent);
+        cudaDeviceSynchronize();
+    }
+
+    // copy results to CPU
+    cout << "copying results to CPU" << endl;
+    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
+}
+
+void runFloydWarshallNaive(int numVertex, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
+
+    int* d_distance;
+    int* d_parent;
+
+    // allocate memory on GPU and copy data from CPU to GPU
+    cout << "allocating data on GPU" << endl;   
+    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
+
+    cout << "copying data to GPU" << endl;
+    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+
+    // run kernel
+    cout << "Kernel is executing" << endl;
     for (int k = 0; k < numVertex; k++) {
         floydWarshallNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
         cudaDeviceSynchronize();
     }
 
+    // copy results to CPU
+    cout << "copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 void runFloydWarshallOptimized(int numVertex, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
+
     int* d_distance;
     int* d_parent;
 
+    // allocate memory on GPU and copy data from CPU to GPU
+    cout << "allocating data on GPU" << endl;
     cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
     cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
 
+    cout << "copying data to GPU" << endl;
     cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
 
     dim3 dimGrid((numVertex - 1) / THREADS_PER_BLOCK + 1, numVertex);
 
+    // run kernel
+    cout << "Kernel is executing" << endl;
     for (int k = 0; k < numVertex; k++) {
         floydWarshallOptimized << <dimGrid, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
     }
 
+    // copy results to CPU
+    cout << "copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 void runFloydWarshallTiled(int numVertex, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
+
     int* d_distance;
     int* d_parent;
 
+    // allocate memory on GPU and copy data from CPU to GPU
     cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
     cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
 
+    cout << "copying data to GPU" << endl;
     cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
 
@@ -362,6 +473,7 @@ void runFloydWarshallTiled(int numVertex, int* distance, int* parent) {
     dim3 dimGridPhase1(1, 1), dimGridPhase2(numDiagonalTiles, 2), dimGridPhase3(numDiagonalTiles, numDiagonalTiles);
     dim3 dimBlock(TILE_DIM, TILE_DIM);
 
+    cout << "Kernel is executing" << endl;
     for (int k = 0; k < numDiagonalTiles; k++) {
         cout << "Phase number " << k << endl;
         floydWarshallTiledPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
@@ -371,18 +483,36 @@ void runFloydWarshallTiled(int numVertex, int* distance, int* parent) {
         floydWarshallTiledPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
         cudaDeviceSynchronize();
     }
+
+    // copy results to CPU
+    cout << "copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 
 void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
+
     int* d_distance;
     int* d_parent;
 
+    // allocate memory on GPU and copy data from CPU to GPU
+    cout << "allocating data on GPU" << endl;
     cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
     cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
 
+    cout << "copying data to GPU" << endl;
     cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
 
@@ -391,6 +521,7 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
     dim3 dimGridPhase1(1, 1), dimGridPhase2(numDiagonalTiles, 2), dimGridPhase3(numDiagonalTiles, numDiagonalTiles);
     dim3 dimBlock(TILE_DIM, TILE_DIM);
 
+    cout << "Kernel is executing" << endl;
     for (int k = 0; k < numDiagonalTiles; k++) {
         cout << "Phase number " << k << endl;
         floydWarshallTiledSharedPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
@@ -400,80 +531,50 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
         floydWarshallTiledSharedPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
         cudaDeviceSynchronize();
     }
+
+    // copy results to CPU
+    cout << "copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
-int main() {
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+int main(int argc, char* argv[]) {
 
-    float duration;
-    /*int h_costMatrix[] = { 
-        INF, 1, 5, INF, INF, INF,
-        INF, INF, 2, 2, 1, INF,
-        INF, INF, INF, INF, 2, INF,
-        INF, INF, INF, INF, 3, 1,
-        INF, INF, INF, INF, INF, 2,
-        INF, INF, INF, INF, INF, INF,
-    };
+    if (argc < 3) {
+        cout << "Please provide algorithm and input file as a command line argument" << endl;
+        return 0;
+    }
+    string pathDataset("../data/");
+    string algorithm(argv[1]);
+    string pathGraphFile(pathDataset+string(argv[2]));
 
-    int numVertex = 6;*/
-
-     int numVertex, numEdges;
-     int* h_costMatrix = fileToCostMatrix(string("../data/gnutella25.txt"), numVertex, numEdges);
+    int numVertex, numEdges;
+    int* costMatrix = fileToCostMatrix(pathGraphFile, numVertex, numEdges);
         
     int* parent = (int*)malloc(numVertex * numVertex * sizeof(int));
     int* distance = (int*)malloc(numVertex * numVertex * sizeof(int));
 
-    // fill(parent, parent + numVertex * numVertex, -1);
-    // fill(distance, distance + numVertex * numVertex, INF);
+    APSPInitDistanceParent(numVertex, costMatrix, distance, parent);
 
-    for (int i = 0; i < numVertex; i++) {
-        for(int j = 0; j < numVertex; j++){
-            if (i == j) {
-                distance[i * numVertex + j] = 0;
-                parent[i * numVertex + j] = -1;
-            }
-            else if (h_costMatrix[i * numVertex + j] == INF) {
-                distance[i * numVertex + j] = INF;
-                parent[i * numVertex + j] = -1;
-            }
-            else {
-                distance[i * numVertex + j] = h_costMatrix[i * numVertex + j];
-                parent[i * numVertex + j] = i;
-            }
-        }
+    if (algorithm == "0") {
+        runCpuFloydWarshall(numVertex, distance, parent);
+    } else if (algorithm == "1") {
+        runFloydWarshallSuperNaive(numVertex, distance, parent);
+    } else if (algorithm == "2") {
+        runFloydWarshallNaive(numVertex, distance, parent);
+    } else if (algorithm == "3") {
+        runFloydWarshallOptimized(numVertex, distance, parent);
+    } else if (algorithm == "4") {
+        runFloydWarshallTiled(numVertex, distance, parent);
+    } else if (algorithm == "2") {
+        runFloydWarshallTiledShared(numVertex, distance, parent);
     }
-
-    // floydWarshall(numVertex, distance, parent);
-    // runFloydWarshallNaive(numVertex, distance, parent);
-    // runFloydWarshallOptimized(numVertex, distance, parent);
-
-    cudaEventRecord(start, 0);
-    runFloydWarshallTiled(numVertex, distance, parent);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(start);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&duration, start, stop);
-    cout << "tiled floyd warshall " << duration << "ms" << endl;
-
-    /*cudaEventRecord(start, 0);
-    runFloydWarshallTiledShared(numVertex, distance, parent);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(start);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&duration, start, stop);
-    cout<<"tiled floyd warshall with shared memory "<< duration << "ms" << endl;*/
-
-    /*for (int i = 0; i < numVertex; i++) {
-        for (int j = 0; j < numVertex; j++) {
-            cout<<distance[i * numVertex + j] << " ";
-        }
-        cout << endl;
-    }*/
-
-    printPathAPSP(numVertex, distance, parent);
-    // writeOutPathAPSP("../output/path.txt", numVertex, distance, parent);
+    //  printPathAPSP(numVertex, distance, parent);
+    string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));
+    // writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
 }

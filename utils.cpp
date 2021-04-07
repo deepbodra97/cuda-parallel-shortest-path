@@ -120,6 +120,26 @@ void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<in
     }
 }
 
+void APSPInitDistanceParent(int numVertex, int* costMatrix, int* distance, int* parent) {
+    cout << "Initializing distance and parent matrices using the cost matrix" << endl;
+    for (int i = 0; i < numVertex; i++) {
+        for (int j = 0; j < numVertex; j++) {
+            if (i == j) {
+                distance[i * numVertex + j] = 0;
+                parent[i * numVertex + j] = -1;
+            }
+            else if (costMatrix[i * numVertex + j] == INF) {
+                distance[i * numVertex + j] = INF;
+                parent[i * numVertex + j] = -1;
+            }
+            else {
+                distance[i * numVertex + j] = costMatrix[i * numVertex + j];
+                parent[i * numVertex + j] = i;
+            }
+        }
+    }
+}
+
 void validateDistance(int numVertex, int* exp_distance, int* distance) {
     for (int i = 0; i < numVertex; i++) {
         assert(exp_distance[i] == distance[i]);
@@ -130,7 +150,7 @@ void validateDistance(int numVertex, int* exp_distance, int* distance) {
 void printPathSSSP(int numVertex, int* distance, int* parent) {
     cout << "Node\tCost\tPath" << endl;
     for (int i = 0; i < numVertex; i++) {
-        if (distance[i] != INF) {
+        if (distance[i] != INF && distance[i] != 0) {
             cout << i << "\t" << distance[i] << "\t";
             cout << i;
 
@@ -152,22 +172,24 @@ void printPathAPSP(int numVertex, int* distance, int* parent) {
     for (int src = 0; src < numVertex; src++) {
         cout << "Source: " << src << endl;
         cout << "Node\tCost\tPath" << endl;
-        for (int i = 0; i < numVertex; i++) {
-            if (distance[src * numVertex + i] != INF) {
-                cout << i << "\t" << distance[src * numVertex + i] << "\t";
-                cout << i;
+        for (int dest = 0; dest < numVertex; dest++) {
+            if (distance[src * numVertex + dest] != INF && distance[src * numVertex + dest] != 0) {
+                cout << dest << "\t" << distance[src * numVertex + dest] << "\t";
+                cout << dest;
 
-                int tmp = parent[src * numVertex + i];
+                int tmp = parent[src * numVertex + dest];
                 while (tmp != -1)
                 {
                     cout << "<-" << tmp;
                     tmp = parent[src * numVertex + tmp];
                 }
+                cout << endl;
             }
             else {
-                cout << i << "\t" << "NA" << "\t" << "-";
+                // uncomment this line to output "NA" for paths that don't exist
+                // cout << dest << "\t" << "NA" << "\t" << "-";
+                // cout << endl;
             }
-            cout << endl;
         }
         cout << endl;
     }
@@ -178,22 +200,24 @@ void writeOutPathAPSP(string filepath, int numVertex, int* distance, int* parent
     for (int src = 0; src < numVertex; src++) {
         out << "Source: " << src << endl;
         out << "Node\tCost\tPath" << endl;
-        for (int i = 0; i < numVertex; i++) {
-            if (distance[src * numVertex + i] != INF) {
-                out << i << "\t" << distance[src * numVertex + i] << "\t";
-                out << i;
+        for (int dest = 0; dest < numVertex; dest++) {
+            if (distance[src * numVertex + dest] != INF && distance[src * numVertex + dest] != 0) {
+                out << dest << "\t" << distance[src * numVertex + dest] << "\t";
+                out << dest;
 
-                int tmp = parent[src * numVertex + i];
+                int tmp = parent[src * numVertex + dest];
                 while (tmp != -1)
                 {
                     out << "<-" << tmp;
                     tmp = parent[src * numVertex + tmp];
                 }
+                out << endl;
             }
             else {
-                out << i << "\t" << "NA" << "\t" << "-";
+                // uncomment this line to output "NA" for paths that don't exist
+                // out << dest << "\t" << "NA" << "\t" << "-";
+                // out << endl;
             }
-            out << endl;
         }
         out << endl;
     }
