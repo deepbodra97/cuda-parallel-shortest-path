@@ -106,7 +106,7 @@ void floydWarshallTiledPhase1(int numVertex, int primary_tile_number, int* dista
     if(i<numVertex && j<numVertex){
         int itoj = i * numVertex + j;
         for (int k = 0; k < TILE_DIM; k++) {
-            if (i-tx+k <numVertex && j-ty+k<numVertex &&
+            if (j-tx+k <numVertex && i-ty+k<numVertex && // i-ty?
                 distance[itoj - tx + k] != INF && distance[itoj - ty * numVertex + k * numVertex] != INF &&
                 distance[itoj] > distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex]) {
 
@@ -135,7 +135,7 @@ void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* dista
         if (i < numVertex && j < numVertex) {
             int itoj = i * numVertex + j;
             for (int k = 0; k < TILE_DIM; k++) {
-                if (i-tx+k-blockIdx.x * blockDim.x + primary_tile_number * blockDim.x < numVertex && j-ty+k < numVertex &&
+                if (j-tx+k-blockIdx.x * blockDim.x + primary_tile_number * blockDim.x < numVertex && i-ty+k < numVertex &&
                     distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] != INF &&
                     distance[itoj - ty * numVertex + k * numVertex] != INF &&
                     distance[itoj] > distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x]
@@ -156,7 +156,7 @@ void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* dista
         if (i < numVertex && j < numVertex) {
             int itoj = i * numVertex + j;
             for (int k = 0; k < TILE_DIM; k++) {
-                if (i-tx+k < numVertex && j-(ty-k)- (blockIdx.x - primary_tile_number) * blockDim.x < numVertex &&
+                if (j-tx+k < numVertex && i-(ty-k)- (blockIdx.x - primary_tile_number) * blockDim.x < numVertex &&
                     distance[itoj - tx + k] != INF &&
                     distance[itoj - (ty - k) * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex] != INF &&
                     distance[itoj] > distance[itoj - tx + k]
@@ -185,8 +185,8 @@ void floydWarshallTiledPhase3(int numVertex, int primary_tile_number, int* dista
     if (i < numVertex && j < numVertex) {
         int itoj = i * numVertex + j;
         for (int k = 0; k < TILE_DIM; k++) {
-            if (i-tx+k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x < numVertex &&
-                j-ty+k - (blockIdx.y - primary_tile_number) * blockDim.y < numVertex &&
+            if (j-tx+k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x < numVertex &&
+                i-ty+k - (blockIdx.y - primary_tile_number) * blockDim.y < numVertex &&
                 distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] != INF &&
                 distance[itoj - ty * numVertex + k * numVertex - (blockIdx.y - primary_tile_number) * blockDim.y * numVertex] != INF &&
                 distance[itoj] > distance[itoj - (tx - k) - (blockIdx.x - primary_tile_number) * blockDim.x]
@@ -207,25 +207,26 @@ __global__ void floydWarshallTiledSharedPhase1(int numVertex, int primary_tile_n
 
     int i = TILE_DIM * primary_tile_number + ty;
     int j = TILE_DIM * primary_tile_number + tx;
+    if (i < numVertex && j < numVertex) {
+        int itoj = i * numVertex + j;
 
-    int itoj = i * numVertex + j;
-   
-    s_distance[ty][tx] = distance[itoj];
-    
-    __syncthreads();
+        s_distance[ty][tx] = distance[itoj];
 
-    #pragma unroll
-    for (int k = 0; k < TILE_DIM; k++) {
         __syncthreads();
-        if (s_distance[ty][k] != INF &&
-            s_distance[k][tx] != INF &&
-            s_distance[ty][tx] > s_distance[ty][k] + s_distance[k][tx]) {
 
-            s_distance[ty][tx] = s_distance[ty][k] + s_distance[k][tx];
+#pragma unroll
+        for (int k = 0; k < TILE_DIM; k++) {
+            __syncthreads();
+            if (s_distance[ty][k] != INF &&
+                s_distance[k][tx] != INF &&
+                s_distance[ty][tx] > s_distance[ty][k] + s_distance[k][tx]) {
+
+                s_distance[ty][tx] = s_distance[ty][k] + s_distance[k][tx];
+            }
+            __syncthreads();
         }
-        __syncthreads();
+        distance[itoj] = s_distance[ty][tx];
     }
-    distance[itoj] = s_distance[ty][tx];
 }
 
 __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_number, int* distance, int* parent) {
@@ -576,5 +577,5 @@ int main(int argc, char* argv[]) {
     }
     //  printPathAPSP(numVertex, distance, parent);
     string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));
-    // writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
+    writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
 }
