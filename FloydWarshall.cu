@@ -207,24 +207,26 @@ __global__ void floydWarshallTiledSharedPhase1(int numVertex, int primary_tile_n
 
     int i = TILE_DIM * primary_tile_number + ty;
     int j = TILE_DIM * primary_tile_number + tx;
+    int itoj = i * numVertex + j;
     if (i < numVertex && j < numVertex) {
-        int itoj = i * numVertex + j;
-
         s_distance[ty][tx] = distance[itoj];
+    } else {
+        s_distance[ty][tx] = INF;
+    }
+    __syncthreads();
 
+    #pragma unroll
+    for (int k = 0; k < TILE_DIM; k++) {
         __syncthreads();
+        if (s_distance[ty][k] != INF &&
+            s_distance[k][tx] != INF &&
+            s_distance[ty][tx] > s_distance[ty][k] + s_distance[k][tx]) {
 
-#pragma unroll
-        for (int k = 0; k < TILE_DIM; k++) {
-            __syncthreads();
-            if (s_distance[ty][k] != INF &&
-                s_distance[k][tx] != INF &&
-                s_distance[ty][tx] > s_distance[ty][k] + s_distance[k][tx]) {
-
-                s_distance[ty][tx] = s_distance[ty][k] + s_distance[k][tx];
-            }
-            __syncthreads();
+            s_distance[ty][tx] = s_distance[ty][k] + s_distance[k][tx];
         }
+        __syncthreads();
+    }
+    if (i < numVertex && j < numVertex) {
         distance[itoj] = s_distance[ty][tx];
     }
 }
@@ -240,7 +242,13 @@ __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_n
     int j = TILE_DIM * primary_tile_number + threadIdx.x;
     
     int idxPrimaryTile = i * numVertex + j;
-    s_distancePrimaryTile[threadIdx.y][threadIdx.x] = distance[idxPrimaryTile];
+
+    if (i < numVertex && j < numVertex) {
+        s_distancePrimaryTile[threadIdx.y][threadIdx.x] = distance[idxPrimaryTile];
+    }
+    else {
+        s_distancePrimaryTile[threadIdx.y][threadIdx.x] = INF;
+    }
     __syncthreads();
 
     int idxCurrentTile;
@@ -250,12 +258,18 @@ __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_n
         i = TILE_DIM * primary_tile_number + threadIdx.y;
         j = TILE_DIM * blockIdx.x + threadIdx.x;
         idxCurrentTile = i * numVertex + j;
-        s_distanceCurrentTile[threadIdx.y][threadIdx.x] = distance[idxCurrentTile];
+
+        if (i < numVertex && j < numVertex) {
+            s_distanceCurrentTile[threadIdx.y][threadIdx.x] = distance[idxCurrentTile];
+        }
+        else {
+            s_distanceCurrentTile[threadIdx.y][threadIdx.x] = INF;
+        }
         __syncthreads();
 
         shortestDistance = s_distanceCurrentTile[threadIdx.y][threadIdx.x];
 
-#pragma unroll
+        #pragma unroll
         for (int k = 0; k < TILE_DIM; k++) {
             int newDistance = s_distancePrimaryTile[threadIdx.y][k] + s_distanceCurrentTile[k][threadIdx.x];
             // __syncthreads();
@@ -271,12 +285,17 @@ __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_n
         i = TILE_DIM * blockIdx.x + threadIdx.y;
         j = TILE_DIM * primary_tile_number + threadIdx.x;
         idxCurrentTile = i * numVertex + j;
-        s_distanceCurrentTile[threadIdx.y][threadIdx.x] = distance[idxCurrentTile];
+        
+        if (i < numVertex && j < numVertex) {
+            s_distanceCurrentTile[threadIdx.y][threadIdx.x] = distance[idxCurrentTile];
+        }
+        else {
+            s_distanceCurrentTile[threadIdx.y][threadIdx.x] = INF;
+        }
         __syncthreads();
-
         shortestDistance = s_distanceCurrentTile[threadIdx.y][threadIdx.x];
 
-#pragma unroll
+        #pragma unroll
         for (int k = 0; k < TILE_DIM; k++) {
             int newDistance = s_distanceCurrentTile[threadIdx.y][k] + s_distancePrimaryTile[k][threadIdx.x];
             // __syncthreads();
@@ -289,8 +308,9 @@ __global__ void floydWarshallTiledSharedPhase2(int numVertex, int primary_tile_n
             __syncthreads();
         }
     }
-
-    distance[idxCurrentTile] = shortestDistance;
+    if (i < numVertex && j < numVertex) {
+        distance[idxCurrentTile] = shortestDistance;
+    }
 }
 
 __global__ void floydWarshallTiledSharedPhase3(int numVertex, int primary_tile_number, int* distance, int* parent) {
@@ -307,32 +327,48 @@ __global__ void floydWarshallTiledSharedPhase3(int numVertex, int primary_tile_n
 
     i = TILE_DIM * primary_tile_number + threadIdx.y;
     j = TILE_DIM * blockIdx.x + threadIdx.x;
-    s_distancePrimaryRow[threadIdx.y][threadIdx.x] = distance[i * numVertex + j];
+    if (i < numVertex && j < numVertex) {
+        s_distancePrimaryRow[threadIdx.y][threadIdx.x] = distance[i * numVertex + j];
+    }
+    else {
+        s_distancePrimaryRow[threadIdx.y][threadIdx.x] = INF;
+    }
+    
 
     i = TILE_DIM * blockIdx.y + threadIdx.y;
     j = TILE_DIM * primary_tile_number + threadIdx.x;
-    s_distancePrimaryCol[threadIdx.y][threadIdx.x] = distance[i * numVertex + j];
+    if (i < numVertex && j < numVertex) {
+        s_distancePrimaryCol[threadIdx.y][threadIdx.x] = distance[i * numVertex + j];
+    }
+    else {
+        s_distancePrimaryCol[threadIdx.y][threadIdx.x] = INF;
+    }
 
     i = TILE_DIM * blockIdx.y + threadIdx.y;
     j = TILE_DIM * blockIdx.x + threadIdx.x;
-    s_distanceCurrentTile[threadIdx.y][threadIdx.x] = distance[i * numVertex + j];
+    if (i < numVertex && j < numVertex) {
+        s_distanceCurrentTile[threadIdx.y][threadIdx.x] = distance[i * numVertex + j];
+    }
+    else {
+        s_distanceCurrentTile[threadIdx.y][threadIdx.x] = INF;
+    }
 
     __syncthreads();
 
     int shortestDist = s_distanceCurrentTile[threadIdx.y][threadIdx.x];
-
-#pragma unroll
+    #pragma unroll
     for (int k = 0; k < TILE_DIM; k++) {
         int newDistance = s_distancePrimaryCol[threadIdx.y][k] + s_distancePrimaryRow[k][threadIdx.x];
         if (s_distancePrimaryCol[threadIdx.y][k] != INF &&
             s_distancePrimaryRow[k][threadIdx.x] != INF &&
             newDistance < shortestDist) {
-
             shortestDist = newDistance;
         }
     }
      // __syncthreads();
-    distance[i * numVertex + j] = shortestDist;
+    if(i<numVertex && j<numVertex){
+        distance[i * numVertex + j] = shortestDist;
+    }
 }
 
 void runFloydWarshallSuperNaive(int numVertex, int* distance, int* parent) {
@@ -572,7 +608,7 @@ int main(int argc, char* argv[]) {
         runFloydWarshallOptimized(numVertex, distance, parent);
     } else if (algorithm == "4") {
         runFloydWarshallTiled(numVertex, distance, parent);
-    } else if (algorithm == "2") {
+    } else if (algorithm == "5") {
         runFloydWarshallTiledShared(numVertex, distance, parent);
     }
     //  printPathAPSP(numVertex, distance, parent);
