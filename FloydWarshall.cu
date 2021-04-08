@@ -414,7 +414,8 @@ void runFloydWarshallSuperNaive(int numVertex, int* distance, int* parent) {
     cout << "Kernel is executing" << endl;
     for (int k = 0; k < numVertex; k++) {
         floydWarshallSuperNaive << <(numVertex - 1) / TILE_DIM + 1, (numVertex - 1) / TILE_DIM + 1 >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
     }
 
     // copy results to CPU
@@ -452,7 +453,8 @@ void runFloydWarshallNaive(int numVertex, int* distance, int* parent) {
     cout << "Kernel is executing" << endl;
     for (int k = 0; k < numVertex; k++) {
         floydWarshallNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
     }
 
     // copy results to CPU
@@ -492,6 +494,8 @@ void runFloydWarshallOptimized(int numVertex, int* distance, int* parent) {
     cout << "Kernel is executing" << endl;
     for (int k = 0; k < numVertex; k++) {
         floydWarshallOptimized << <dimGrid, THREADS_PER_BLOCK >> > (numVertex, k, d_distance, d_parent);
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
     }
 
     // copy results to CPU
@@ -532,11 +536,14 @@ void runFloydWarshallTiled(int numVertex, int* distance, int* parent) {
     cout << "Kernel is executing" << endl;
     for (int k = 0; k < numDiagonalTiles; k++) {
         floydWarshallTiledPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
         floydWarshallTiledPhase2 << <  dimGridPhase2, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
         floydWarshallTiledPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
     }
 
     // copy results to CPU
@@ -579,11 +586,14 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
     cout << "Kernel is executing" << endl;
     for (int k = 0; k < numDiagonalTiles; k++) {
         floydWarshallTiledSharedPhase1 << <  dimGridPhase1, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
         floydWarshallTiledSharedPhase2 << <  dimGridPhase2, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
         floydWarshallTiledSharedPhase3 << <  dimGridPhase3, dimBlock >> > (numVertex, k, d_distance, d_parent);
-        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
     }
 
     // copy results to CPU
