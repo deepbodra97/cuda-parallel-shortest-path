@@ -640,5 +640,5 @@ int main(int argc, char* argv[]) {
     }
     //  printPathAPSP(numVertex, distance, parent);
     string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));
-    writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
+    // writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
 }

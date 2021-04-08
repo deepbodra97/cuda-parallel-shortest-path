@@ -13,6 +13,8 @@
 
 #include <limits.h>
 
+#include<exception>
+
 #define INF INT_MAX
 #define THREADS_PER_BLOCK 1024
 

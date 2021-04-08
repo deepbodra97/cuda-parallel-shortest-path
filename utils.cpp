@@ -12,10 +12,6 @@ int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
     cout << "Reading input file" << endl;
     ifstream file(filename);
     string line;
-    /*int skip = 8;
-    while (skip != 0 && getline(file, line)) {
-        skip--;
-    }*/
 
     getline(file, line);
     vector<string> tokens;
@@ -25,7 +21,8 @@ int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
 
     int* costMatrix = (int*)malloc(numVertex * numVertex * sizeof(int));
     if (costMatrix == NULL) {
-        cout << "malloc failed" << endl;
+        cout << "Malloc failed" << endl;
+        throw std::exception();
     }
     fill(costMatrix, costMatrix + numVertex * numVertex, INF);
 
@@ -37,7 +34,6 @@ int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
             tokens.push_back(token);
         }
         int src = stoi(tokens[0]), dest = stoi(tokens[1]), cost = stoi(tokens[2]);
-        // cout <<"error"<< src << " " << dest << endl;
         costMatrix[src * numVertex + dest] = cost;
     }
     cout << "Finished reading input file" << endl;
@@ -56,10 +52,6 @@ struct AdjacencyListNode* newAdjacencyListNode(int dest, int weight) {
 struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
     ifstream file(filename);
     string line;
-    /*int skip = 8;
-    while (skip != 0 && getline(file, line)) {
-        skip--;
-    }*/
 
     while (getline(file, line)) {
         stringstream linestream(line);
@@ -74,8 +66,6 @@ struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
         struct AdjacencyListNode* newNode = newAdjacencyListNode(dest, cost);
         newNode->next = graph->neighbors[src].head;
         graph->neighbors[src].head = newNode;
-
-        // cout << "error" << src << " " << dest << endl;
     }
     return graph;
 }
