@@ -113,7 +113,7 @@ void floydWarshallTiledPhase1(int numVertex, int primary_tile_number, int* dista
                 distance[itoj] = distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex];
                 parent[itoj] = TILE_DIM * primary_tile_number + k;
             }
-            __syncthreads();
+            // __syncthreads();
         }
     }
 }
@@ -144,7 +144,7 @@ void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* dista
                     distance[itoj] = distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] + distance[itoj - ty * numVertex + k * numVertex];
                     parent[itoj] = TILE_DIM * primary_tile_number + k;
                 }
-                __syncthreads();
+                // __syncthreads();
             }
         }
     }
@@ -165,12 +165,10 @@ void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* dista
                     distance[itoj] = distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex];
                     parent[itoj] = TILE_DIM * primary_tile_number + k;
                 }
-                __syncthreads();
+                // __syncthreads();
             }
         }
     }
-
-    
 }
 
 __global__
@@ -640,5 +638,5 @@ int main(int argc, char* argv[]) {
     }
     //  printPathAPSP(numVertex, distance, parent);
     string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));
-    // writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
+    writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
 }

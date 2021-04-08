@@ -36,7 +36,9 @@ void dijkstra(int numVertex, int* h_costMatrix, bool* visited, int* distance, in
             }
             visited[src * numVertex + u] = true;
             for (int v = 0; v < numVertex; v++) {
-                if (!visited[src * numVertex + v] && h_costMatrix[u * numVertex + v] != INF && (distance[src * numVertex + u] + h_costMatrix[u * numVertex + v]) < distance[src * numVertex + v]){
+                if (!visited[src * numVertex + v] && h_costMatrix[u * numVertex + v] != INF &&
+                    distance[src * numVertex + v] > distance[src * numVertex + u] + h_costMatrix[u * numVertex + v]){
+                    
                     parent[src * numVertex + v] = u;
                     distance[src * numVertex + v] = distance[src * numVertex + u] + h_costMatrix[u * numVertex + v];
                 }
@@ -44,30 +46,6 @@ void dijkstra(int numVertex, int* h_costMatrix, bool* visited, int* distance, in
         }
     }
 }
-
-//__global__
-//void dijkstra(struct Graph* graph, bool* visited, int* distance, int* parent) {
-//    int src = blockIdx.x * blockDim.x + threadIdx.x;
-//
-//    if (src < graph->numVertex) {
-//        distance[src * graph->numVertex + src] = 0;
-//
-//        for (int i = 0; i < graph->numVertex - 1; i++) {
-//            int u = extractMin(graph->numVertex, distance, visited, src);
-//            if (u == -1) { // no min node to explore
-//                break;
-//            }
-//            visited[src * graph->numVertex + u] = true;
-//            struct AdjacencyListNode* neighbor = graph->neighbors[u].head;
-//            while (neighbor != NULL) {
-//                if (!visited[src * graph->numVertex + neighbor->dest] && (distance[src * graph->numVertex + u] + neighbor->cost) < distance[src * graph->numVertex + neighbor->dest]) {
-//                    parent[src * graph->numVertex + neighbor->dest] = u;
-//                    distance[src * graph->numVertex + neighbor->dest] = distance[src * graph->numVertex + u] + neighbor->cost;
-//                }
-//            }
-//        }
-//    }
-//}
 
 
 int main(int argc, char* argv[]) {
@@ -81,7 +59,6 @@ int main(int argc, char* argv[]) {
     int numVertex, numEdges;
 
     int* h_costMatrix = fileToCostMatrix(pathGraphFile, numVertex, numEdges);
-    fill(h_costMatrix, h_costMatrix + numVertex * numVertex, INF);
 
     const int bytesCostMatrix = numVertex * numVertex * sizeof(int);
     const int bytesVisited = numVertex * numVertex * sizeof(bool);
@@ -99,6 +76,13 @@ int main(int argc, char* argv[]) {
     int* d_distance;
     bool* d_visited;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
+
     cudaCheck(cudaMalloc((void**)&d_costMatrix, bytesCostMatrix));
     cudaCheck(cudaMalloc((void**)&d_parent, bytesCostMatrix));
     cudaCheck(cudaMalloc((void**)&d_distance, bytesCostMatrix));
@@ -109,12 +93,18 @@ int main(int argc, char* argv[]) {
     cudaCheck(cudaMemcpy(d_distance, h_distance, bytesCostMatrix, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_visited, h_visited, bytesVisited, cudaMemcpyHostToDevice));
 
+    cout << "Kernel is executing" << endl;
     dijkstra<<<(numVertex-1)/THREADS_PER_BLOCK+1, THREADS_PER_BLOCK>>>(numVertex, d_costMatrix, d_visited, d_distance, d_parent);
     cudaCheck(cudaGetLastError());
     cudaCheck(cudaDeviceSynchronize());
     cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
     
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
+
     // printPathAPSP(numVertex, h_distance, h_parent);
     string pathOutputFile(string("../output/d") + string(".txt"));
     writeOutPathAPSP(pathOutputFile, numVertex, h_distance, h_parent);

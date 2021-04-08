@@ -17,5 +17,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 add_executable(FloydWarshall FloydWarshall.cu utils.cpp utils.h)
+add_executable(Dijkstra Dijkstra.cu utils.cpp utils.h)
 
 message(STATUS "build type:  ${CMAKE_BUILD_TYPE}")
