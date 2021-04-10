@@ -111,7 +111,7 @@ void floydWarshallTiledPhase1(int numVertex, int primary_tile_number, int* dista
                 distance[itoj] > distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex]) {
 
                 distance[itoj] = distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex];
-                parent[itoj] = TILE_DIM * primary_tile_number + k;
+                // parent[itoj] = TILE_DIM * primary_tile_number + k;
             }
             // __syncthreads();
         }
@@ -142,7 +142,7 @@ void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* dista
                     + distance[itoj - ty * numVertex + k * numVertex]) {
 
                     distance[itoj] = distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] + distance[itoj - ty * numVertex + k * numVertex];
-                    parent[itoj] = TILE_DIM * primary_tile_number + k;
+                    // parent[itoj] = TILE_DIM * primary_tile_number + k;
                 }
                 // __syncthreads();
             }
@@ -163,7 +163,7 @@ void floydWarshallTiledPhase2(int numVertex, int primary_tile_number, int* dista
                     + distance[itoj - (ty - k) * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex]) {
 
                     distance[itoj] = distance[itoj - tx + k] + distance[itoj - ty * numVertex + k * numVertex - (blockIdx.x - primary_tile_number) * blockDim.x * numVertex];
-                    parent[itoj] = TILE_DIM * primary_tile_number + k;
+                    // parent[itoj] = TILE_DIM * primary_tile_number + k;
                 }
                 // __syncthreads();
             }
@@ -191,7 +191,7 @@ void floydWarshallTiledPhase3(int numVertex, int primary_tile_number, int* dista
                 + distance[itoj - (ty - k) * numVertex - (blockIdx.y - primary_tile_number) * blockDim.y * numVertex]) {
 
                 distance[itoj] = distance[itoj - tx + k - blockIdx.x * blockDim.x + primary_tile_number * blockDim.x] + distance[itoj - ty * numVertex + k * numVertex - (blockIdx.y - primary_tile_number) * blockDim.y * numVertex];
-                parent[itoj] = TILE_DIM * primary_tile_number + k;
+                // parent[itoj] = TILE_DIM * primary_tile_number + k;
             }
         }
     }

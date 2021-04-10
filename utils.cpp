@@ -158,6 +158,31 @@ void printPathSSSP(int numVertex, int* distance, int* parent) {
     }
 }
 
+void writeOutPathSSSP(string filepath, int numVertex, int* distance, int* parent) {
+    ofstream out(filepath);
+    out << "Node\tCost\tPath" << endl;
+    for (int i = 0; i < numVertex; i++) {
+        if (distance[i] != INF && distance[i] != 0) {
+            out << i << "\t" << distance[i] << "\t";
+            out << i;
+
+            int tmp = parent[i];
+            while (tmp != -1)
+            {
+                out << "<-" << tmp;
+                tmp = parent[tmp];
+            }
+            out << endl;
+        }
+        else {
+            // uncomment this line to output "NA" for paths that don't exist
+            // out << i << "\t" << "NA" << "\t" << "-";
+            // out << endl;
+        }
+    }
+}
+
+
 void printPathAPSP(int numVertex, int* distance, int* parent) {
     for (int src = 0; src < numVertex; src++) {
         cout << "Source: " << src << endl;
