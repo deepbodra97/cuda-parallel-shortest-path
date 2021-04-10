@@ -88,7 +88,7 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
     while (getline(file, line)) {
         tokens.clear();
         splitBySpaceToVector(line, tokens);
-        int src = stoi(tokens[1]) - 1, dest = stoi(tokens[2]) - 1, cost = stoi(tokens[3]);
+        int src = stoi(tokens[0]) - 1, dest = stoi(tokens[1]) - 1, cost = stoi(tokens[2]);
         // cout <<"error"<< src << " " << dest << endl;
         adjacencyList[src].push_back(make_pair(dest, cost));
     }

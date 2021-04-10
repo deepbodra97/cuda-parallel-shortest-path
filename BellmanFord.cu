@@ -10,6 +10,12 @@
 using namespace std;
 
 void runCpuBellmanFord(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+    cudaEventRecord(start, 0);
+
     distance[src] = 0;
 
     for (int k = 0; k < numVertex - 1; k++) {
@@ -26,6 +32,11 @@ void runCpuBellmanFord(int src, int numVertex, int* vertices, int* indices, int*
             }
         }
     }
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 __global__
@@ -55,7 +66,11 @@ __global__
 void bellmanFordUpdateDistanceNaive(int numVertex, int* prev_distance, int* distance) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < numVertex) {
-        prev_distance[tid] = distance[tid];
+        // prev_distance[tid] = distance[tid];
+        if (prev_distance[tid] > distance[tid]) {
+            prev_distance[tid] = distance[tid];
+        }
+        distance[tid] = prev_distance[tid];
         // distance[tid] = INF; // not needed technically
     }
 }
@@ -96,7 +111,7 @@ void bellmanFordRelaxStride(int numVertex, int* vertices, int* indices, int* edg
         /*if (prev_distance[tid] > distance[tid]) {
             prev_distance[tid] = distance[tid];
         }*/
-        prev_distance[idx] = distance[idx];
+        // prev_distance[idx] = distance[idx];
     }
 }
 
@@ -148,14 +163,13 @@ void bellmanFordRelaxStrideOptimize(int numVertex, int* vertices, int* indices, 
             }
         }
         if (prev_distance[idx] > distance[idx]) {
-            prev_distance[idx] = distance[idx];
+            // prev_distance[idx] = distance[idx];
             flag[idx] = true;
         }
     }
 }
 
 void runBellmanFordNaive(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
-    
     int* prev_distance = (int*)malloc(numVertex * sizeof(int));
 
     fill(prev_distance, prev_distance + numVertex, INF);
@@ -164,6 +178,13 @@ void runBellmanFordNaive(int src, int numVertex, int* vertices, int* indices, in
 
     prev_distance[src] = 0;
     distance[src] = 0;
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
 
     int* d_prev_distance;
     int* d_distance;
@@ -180,16 +201,21 @@ void runBellmanFordNaive(int src, int numVertex, int* vertices, int* indices, in
     cout << "Calculating shortest distance" << endl;
     for (int k = 0; k < numVertex - 1; k++) {
         bellmanFordRelaxNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_prev_distance, d_distance, d_parent);
+        cudaDeviceSynchronize();
         bellmanFordUpdateDistanceNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance);
+        cudaDeviceSynchronize();
     }
     cout << "Constructing path" << endl;
     bellmanFordParentNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_distance, d_parent);
-
+    cudaDeviceSynchronize();
     cout << "Copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
 
-    
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 void runBellmanFordStride(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
@@ -201,6 +227,13 @@ void runBellmanFordStride(int src, int numVertex, int* vertices, int* indices, i
 
     prev_distance[src] = 0;
     distance[src] = 0;
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
 
     int* d_prev_distance;
     int* d_distance;
@@ -214,21 +247,30 @@ void runBellmanFordStride(int src, int numVertex, int* vertices, int* indices, i
     cudaCheck(cudaMemcpy(d_distance, distance, numVertex * sizeof(int), cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, parent, numVertex * sizeof(int), cudaMemcpyHostToDevice));
 
+    int numBlocks = ((numVertex - 1) / THREADS_PER_BLOCK + 1)/2;
+
     cout << "Calculating shortest distance" << endl;
     for (int k = 0; k < numVertex - 1; k++) {
-        bellmanFordRelaxStride << <50, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_prev_distance, d_distance, d_parent);
-        bellmanFordUpdateDistanceStride << <50, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance);
+        bellmanFordRelaxStride << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_prev_distance, d_distance, d_parent);
+        cudaDeviceSynchronize();
+        bellmanFordUpdateDistanceStride << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance);
+        cudaDeviceSynchronize();
     }
     cout << "Constructing path" << endl;
-    bellmanFordParentStride << <50, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_distance, d_parent);
+    bellmanFordParentStride << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_distance, d_parent);
+    cudaDeviceSynchronize();
 
     cout << "Copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 void runBellmanFordStrideOptimize(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
-
     int* prev_distance = (int*)malloc(numVertex * sizeof(int));
     bool* flag = (bool*)malloc(numVertex * sizeof(bool));
 
@@ -237,10 +279,16 @@ void runBellmanFordStrideOptimize(int src, int numVertex, int* vertices, int* in
     fill(parent, parent + numVertex, -1);
     fill(flag, flag + numVertex, false);
 
-
     prev_distance[src] = 0;
     distance[src] = 0;
     flag[src] = true;
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
 
     int* d_prev_distance;
     int* d_distance;
@@ -258,16 +306,24 @@ void runBellmanFordStrideOptimize(int src, int numVertex, int* vertices, int* in
     cudaCheck(cudaMemcpy(d_flag, flag, numVertex * sizeof(bool), cudaMemcpyHostToDevice));
 
     cout << "Calculating shortest distance" << endl;
+    int numBlocks = ((numVertex - 1) / THREADS_PER_BLOCK + 1) / 2;
     for (int k = 0; k < numVertex - 1; k++) {
-        bellmanFordRelaxStrideOptimize << <100, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_prev_distance, d_distance, d_parent, d_flag);
-        bellmanFordUpdateDistanceStride << <100, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance);
+        bellmanFordRelaxStrideOptimize << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_prev_distance, d_distance, d_parent, d_flag);
+        cudaDeviceSynchronize();
+        bellmanFordUpdateDistanceStride << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance);
+        cudaDeviceSynchronize();
     }
     cout << "Constructing path" << endl;
-    bellmanFordParentStride << <100, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_distance, d_parent);
-
+    bellmanFordParentStride << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_distance, d_parent);
+    cudaDeviceSynchronize();
     cout << "Copying results to CPU" << endl;
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
     cudaCheck(cudaMemcpy(parent, d_parent, numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 
@@ -289,6 +345,8 @@ int main(int argc, char* argv[]) {
     fileToAdjacencyList(pathGraphFile, adjacencyList, numVertex, numEdges);
     adjacencyListToCSR(adjacencyList, vertices, indices, edges, weights);
 
+    adjacencyList.clear();
+
     int* d_vertices;
     int* d_indices;
     int* d_edges;
@@ -306,8 +364,8 @@ int main(int argc, char* argv[]) {
         cudaCheck(cudaMemcpy(d_weights, weights.data(), numEdges * sizeof(int), cudaMemcpyHostToDevice));
     }
     
-    int* parent = (int*)malloc(numVertex * numVertex * sizeof(int));
-    int* distance = (int*)malloc(numVertex * numVertex * sizeof(int));
+    int* parent = (int*)malloc(numVertex * sizeof(int));
+    int* distance = (int*)malloc(numVertex * sizeof(int));
 
     fill(distance, distance + numVertex, INF);
     fill(parent, parent + numVertex, -1);
