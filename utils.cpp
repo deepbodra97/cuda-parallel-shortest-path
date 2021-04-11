@@ -180,6 +180,7 @@ void writeOutPathSSSP(string filepath, int numVertex, int* distance, int* parent
             // out << endl;
         }
     }
+    out.close();
 }
 
 
@@ -236,4 +237,5 @@ void writeOutPathAPSP(string filepath, int numVertex, int* distance, int* parent
         }
         out << endl;
     }
+    out.close();
 }

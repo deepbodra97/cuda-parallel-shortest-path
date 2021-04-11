@@ -18,7 +18,7 @@ void runCpuBellmanFord(int src, int numVertex, int* vertices, int* indices, int*
 
     distance[src] = 0;
 
-    for (int k = 0; k < numVertex - 1; k++) {
+    for (int k = 0; k < numVertex; k++) {
         for (int i = 0; i < numVertex; i++) {
             // int u = vertices[i];
             for (int j = indices[i]; j < indices[i + 1]; j++) {
@@ -49,7 +49,7 @@ void bellmanFordRelaxNaive(int numVertex, int* vertices, int* indices, int* edge
             int v = edges[j];
             int w = weights[j];
 
-            if (prev_distance[tid] != INF && (prev_distance[tid] + w) < prev_distance[v]) {
+            if (prev_distance[tid] != INF && (prev_distance[tid] + w) < distance[v]) {
                 // parent[v] = i; // atomic
                 atomicMin(&distance[v], prev_distance[tid] + w);
             }
@@ -66,11 +66,8 @@ __global__
 void bellmanFordUpdateDistanceNaive(int numVertex, int* prev_distance, int* distance) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < numVertex) {
-        // prev_distance[tid] = distance[tid];
-        if (prev_distance[tid] > distance[tid]) {
-            prev_distance[tid] = distance[tid];
-        }
-        distance[tid] = prev_distance[tid];
+        prev_distance[tid] = distance[tid];
+        // distance[tid] = prev_distance[tid];
         // distance[tid] = INF; // not needed technically
     }
 }
@@ -103,7 +100,7 @@ void bellmanFordRelaxStride(int numVertex, int* vertices, int* indices, int* edg
             int v = edges[j];
             int w = weights[j];
 
-            if (prev_distance[idx] != INF && (prev_distance[idx] + w) < prev_distance[v]) {
+            if (prev_distance[idx] != INF && (prev_distance[idx] + w) < distance[v]) {
                 // parent[v] = i; // atomic
                 atomicMin(&distance[v], prev_distance[idx] + w);
             }
@@ -121,7 +118,7 @@ void bellmanFordUpdateDistanceStride(int numVertex, int* prev_distance, int* dis
     int stride = blockDim.x * gridDim.x;
 
     for (int idx = tid; idx < numVertex; idx += stride) {
-        prev_distance[tid] = distance[tid];
+        prev_distance[idx] = distance[idx];
         // distance[tid] = INF; // not needed technically
     }
 }
@@ -156,18 +153,29 @@ void bellmanFordRelaxStrideOptimize(int numVertex, int* vertices, int* indices, 
                 int v = edges[j];
                 int w = weights[j];
 
-                if (prev_distance[idx] != INF && (prev_distance[idx] + w) < prev_distance[v]) {
+                if (prev_distance[idx] != INF && (prev_distance[idx] + w) < distance[v]) {
                     // parent[v] = i; // atomic
                     atomicMin(&distance[v], prev_distance[idx] + w);
                 }
             }
         }
-        if (prev_distance[idx] > distance[idx]) {
-            // prev_distance[idx] = distance[idx];
-            flag[idx] = true;
-        }
     }
 }
+
+__global__
+void bellmanFordUpdateDistanceStrideOptimize(int numVertex, int* prev_distance, int* distance, bool* flag) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int idx = tid; idx < numVertex; idx += stride) {
+        if (prev_distance[idx] > distance[idx]) {
+            flag[idx] = true;
+        }
+        prev_distance[idx] = distance[idx];
+        // distance[tid] = INF; // not needed technically
+    }
+}
+
 
 void runBellmanFordNaive(int src, int numVertex, int* vertices, int* indices, int* edges, int* weights, int* distance, int* parent) {
     int* prev_distance = (int*)malloc(numVertex * sizeof(int));
@@ -310,7 +318,7 @@ void runBellmanFordStrideOptimize(int src, int numVertex, int* vertices, int* in
     for (int k = 0; k < numVertex - 1; k++) {
         bellmanFordRelaxStrideOptimize << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, vertices, indices, edges, weights, d_prev_distance, d_distance, d_parent, d_flag);
         cudaDeviceSynchronize();
-        bellmanFordUpdateDistanceStride << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance);
+        bellmanFordUpdateDistanceStrideOptimize << <numBlocks, THREADS_PER_BLOCK >> > (numVertex, d_prev_distance, d_distance, d_flag);
         cudaDeviceSynchronize();
     }
     cout << "Constructing path" << endl;
