@@ -12,7 +12,7 @@ def parseDIMACS(fileName):
 			lines[i] = numVertex + " " + numEdges + "\n"
 		elif i>=7:	
 			_, src, dest, cost = line.split()
-			lines[i] = src + " " + dest + " " + cost + "\n"
+			lines[i] = str(int(src)-1) + " " + str(int(dest)-1) + " " + cost + "\n"
 		else:
 			lines[i] = ''
 

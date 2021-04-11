@@ -40,44 +40,10 @@ int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
     return costMatrix;
 }
 
-struct AdjacencyListNode* newAdjacencyListNode(int dest, int weight) {
-    struct AdjacencyListNode* newNode = (struct AdjacencyListNode*)malloc(sizeof(struct AdjacencyListNode));
-    newNode->dest = dest;
-    newNode->cost = weight;
-    newNode->next = NULL;
-    return newNode;
-}
-
-
-struct Graph* fileToAdjacencyList(string filename, struct Graph* graph) {
-    ifstream file(filename);
-    string line;
-
-    while (getline(file, line)) {
-        stringstream linestream(line);
-        vector<string> tokens;
-        string token;
-        while (linestream >> token) {
-            tokens.push_back(token);
-        }
-
-        int src = stoi(tokens[1]) - 1, dest = stoi(tokens[2]) - 1, cost = stoi(tokens[3]);
-
-        struct AdjacencyListNode* newNode = newAdjacencyListNode(dest, cost);
-        newNode->next = graph->neighbors[src].head;
-        graph->neighbors[src].head = newNode;
-    }
-    return graph;
-}
-
 void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges) {
     cout << "Reading input file" << endl;
     ifstream file(filename);
     string line;
-    /*int skip = 8;
-    while (skip != 0 && getline(file, line)) {
-        skip--;
-    }*/
 
     getline(file, line);
     vector<string> tokens;
@@ -88,8 +54,7 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
     while (getline(file, line)) {
         tokens.clear();
         splitBySpaceToVector(line, tokens);
-        int src = stoi(tokens[0]) - 1, dest = stoi(tokens[1]) - 1, cost = stoi(tokens[2]);
-        // cout <<"error"<< src << " " << dest << endl;
+        int src = stoi(tokens[0]), dest = stoi(tokens[1]), cost = stoi(tokens[2]);
         adjacencyList[src].push_back(make_pair(dest, cost));
     }
     cout << "Finished reading input file" << endl;
