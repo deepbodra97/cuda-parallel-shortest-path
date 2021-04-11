@@ -349,14 +349,15 @@ void runBellmanFordStrideOptimize(int src, int numVertex, int* vertices, int* in
 int main(int argc, char* argv[]) {
 
 
-    if (argc < 4) {
-        cout << "Please provide algorithm, input file and source as a command line argument" << endl;
+    if (argc < 5) {
+        cout << "Please provide algorithm, input file, source and validate in the command line argument" << endl;
         return 0;
     }
     string pathDataset("../data/");
     string algorithm(argv[1]);
     string pathGraphFile(pathDataset+string(argv[2]));
     int src = stoi(argv[3]);
+    string validate(argv[4]);
 
     int numVertex, numEdges;
     vector<int> vertices, indices, edges, weights;
@@ -391,15 +392,30 @@ int main(int argc, char* argv[]) {
     
     if (algorithm == "0") {
         runCpuBellmanFord(src, numVertex, vertices.data(), indices.data(), edges.data(), weights.data(), distance, parent);
-    } else if (algorithm == "1") {
-        runBellmanFordNaive(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
-    } else if (algorithm == "2") {
-        runBellmanFordStride(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
-    } else if (algorithm == "3") {
-        runBellmanFordStrideOptimize(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
-    } else {
-        cout << "Illegal Algorithm" << endl;
+    } else{
+        if (algorithm == "1") {
+            runBellmanFordNaive(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
+        }
+        else if (algorithm == "2") {
+            runBellmanFordStride(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
+        }
+        else if (algorithm == "3") {
+            runBellmanFordStrideOptimize(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
+        }
+        else {
+            cout << "Illegal Algorithm" << endl;
+        }
+
+        if (validate == "true") {
+            int* exp_parent = (int*)malloc(numVertex * sizeof(int));
+            int* exp_distance = (int*)malloc(numVertex * sizeof(int));
+            fill(exp_distance, exp_distance + numVertex, INF);
+            fill(exp_parent, exp_parent + numVertex, -1);
+            runCpuBellmanFord(src, numVertex, vertices.data(), indices.data(), edges.data(), weights.data(), distance, exp_parent);
+            validateDistanceSSSP(numVertex, exp_distance, distance);
+        }
     }
+        
 
     cudaCheck(cudaFree(d_vertices));
     cudaCheck(cudaFree(d_indices));
@@ -407,5 +423,5 @@ int main(int argc, char* argv[]) {
     cudaCheck(cudaFree(d_weights));
 
     string pathOutputFile(string("../output/bf") + algorithm + string(".txt"));
-    writeOutPathSSSP(pathOutputFile, numVertex, distance, parent);
+    // writeOutPathSSSP(pathOutputFile, numVertex, distance, parent);
 }

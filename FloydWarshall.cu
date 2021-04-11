@@ -607,13 +607,14 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
 
 int main(int argc, char* argv[]) {
 
-    if (argc < 3) {
+    if (argc < 4) {
         cout << "Please provide algorithm and input file as a command line argument" << endl;
         return 0;
     }
     string pathDataset("../data/");
     string algorithm(argv[1]);
     string pathGraphFile(pathDataset+string(argv[2]));
+    string validate(argv[3]);
 
     int numVertex, numEdges;
     int* costMatrix = fileToCostMatrix(pathGraphFile, numVertex, numEdges);
@@ -625,16 +626,26 @@ int main(int argc, char* argv[]) {
 
     if (algorithm == "0") {
         runCpuFloydWarshall(numVertex, distance, parent);
-    } else if (algorithm == "1") {
-        runFloydWarshallSuperNaive(numVertex, distance, parent);
-    } else if (algorithm == "2") {
-        runFloydWarshallNaive(numVertex, distance, parent);
-    } else if (algorithm == "3") {
-        runFloydWarshallOptimized(numVertex, distance, parent);
-    } else if (algorithm == "4") {
-        runFloydWarshallTiled(numVertex, distance, parent);
-    } else if (algorithm == "5") {
-        runFloydWarshallTiledShared(numVertex, distance, parent);
+    } else{
+        if (algorithm == "1") {
+            runFloydWarshallSuperNaive(numVertex, distance, parent);
+        } else if (algorithm == "2") {
+            runFloydWarshallNaive(numVertex, distance, parent);
+        } else if (algorithm == "3") {
+            runFloydWarshallOptimized(numVertex, distance, parent);
+        } else if (algorithm == "4") {
+            runFloydWarshallTiled(numVertex, distance, parent);
+        } else if (algorithm == "5") {
+            runFloydWarshallTiledShared(numVertex, distance, parent);
+        }
+
+        if (validate == "true") {
+            int* exp_parent = (int*)malloc(numVertex * sizeof(int));
+            int* exp_distance = (int*)malloc(numVertex * sizeof(int));
+            APSPInitDistanceParent(numVertex, costMatrix, distance, parent);
+            runCpuFloydWarshall(numVertex, distance, parent);
+            validateDistanceAPSP(numVertex, exp_distance, distance);
+        }
     }
     //  printPathAPSP(numVertex, distance, parent);
     string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));

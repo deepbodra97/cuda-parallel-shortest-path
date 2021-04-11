@@ -9,6 +9,44 @@
 
 using namespace std;
 
+void dijkstra(int src, int numVertex, int* costMatrix, int* distance, int* parent) {
+    priority_queue< pair<int, int>, vector <pair<int, int>>, greater<pair<int, int>> > heap;
+
+    heap.push(make_pair(0, src));
+    distance[src * numVertex] = 0;
+    while (!heap.empty()) {
+        int u = heap.top().second;
+        heap.pop();
+
+        for (int v = 0; v < numVertex ; v++) {
+            int weight = costMatrix[src * numVertex + v];
+
+            if (distance[src * numVertex + v] > distance[src * numVertex + u] + weight) {
+                distance[src * numVertex + v] = distance[src * numVertex + u] + weight;
+                heap.push(make_pair(distance[src * numVertex + v], v));
+            }
+        }
+    }
+}
+
+void runCpuDijkstra(int numVertex, int* costMatrix, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+    cudaEventRecord(start, 0);
+
+    for (int src = 0; src < numVertex; src++) {
+        dijkstra(src, numVertex, costMatrix, distance, parent);
+    }
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
+}
+
 __device__
 int extractMin(int numVertex, int* distance, bool* visited, int src) {
     int minNode = -1;
@@ -20,6 +58,43 @@ int extractMin(int numVertex, int* distance, bool* visited, int src) {
         }
     }
     return minNode;
+}
+
+void runGpuDijkstra(int numVertex, int* costMatrix, bool* visited, int* distance, int* parent) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float duration;
+
+
+    cudaEventRecord(start, 0);
+
+    int* d_costMatrix;
+    int* d_parent;
+    int* d_distance;
+    bool* d_visited;
+
+    cudaCheck(cudaMalloc((void**)&d_costMatrix, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_parent, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_distance, numVertex * numVertex * sizeof(int)));
+    cudaCheck(cudaMalloc((void**)&d_visited, numVertex * numVertex * sizeof(bool)));
+
+    cudaCheck(cudaMemcpy(d_costMatrix, costMatrix, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_visited, visited, numVertex * numVertex * sizeof(bool), cudaMemcpyHostToDevice));
+
+    cout << "Kernel is executing" << endl;
+    dijkstra << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, d_costMatrix, d_visited, d_distance, d_parent);
+    cudaCheck(cudaGetLastError());
+    cudaCheck(cudaDeviceSynchronize());
+    cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+    cudaCheck(cudaMemcpy(parent, d_parent, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&duration, start, stop);
+    cout << "Time: " << duration << "ms" << endl;
 }
 
 __global__
@@ -49,64 +124,46 @@ void dijkstra(int numVertex, int* h_costMatrix, bool* visited, int* distance, in
 
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
+    if (argc < 3) {
         cout << "Please provide an input file as a command line argument" << endl;
         return 0;
     }
     string pathDataset("../data/");
-    string pathGraphFile(pathDataset + string(argv[1]));
+    string algorithm(argv[1]);
+    string pathGraphFile(pathDataset + string(argv[2]));
+    string validate(argv[3]);
 
     int numVertex, numEdges;
 
     int* h_costMatrix = fileToCostMatrix(pathGraphFile, numVertex, numEdges);
 
-    const int bytesCostMatrix = numVertex * numVertex * sizeof(int);
-    const int bytesVisited = numVertex * numVertex * sizeof(bool);
-
-    int* h_parent = (int*)malloc(bytesCostMatrix);
-    int* h_distance = (int*)malloc(bytesCostMatrix);
-    bool* h_visited = (bool*)malloc(bytesVisited);
+    int* h_parent = (int*)malloc(numVertex * numVertex * sizeof(int));
+    int* h_distance = (int*)malloc(numVertex * numVertex * sizeof(int));
+    bool* h_visited = (bool*)malloc(numVertex * numVertex * sizeof(bool));
 
     fill(h_parent, h_parent + numVertex * numVertex, -1);
     fill(h_distance, h_distance + numVertex * numVertex, INF);
     fill(h_visited, h_visited + numVertex * numVertex, false);
 
-    int* d_costMatrix;
-    int* d_parent;
-    int* d_distance;
-    bool* d_visited;
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    float duration;
-
-    cudaEventRecord(start, 0);
-
-    cudaCheck(cudaMalloc((void**)&d_costMatrix, bytesCostMatrix));
-    cudaCheck(cudaMalloc((void**)&d_parent, bytesCostMatrix));
-    cudaCheck(cudaMalloc((void**)&d_distance, bytesCostMatrix));
-    cudaCheck(cudaMalloc((void**)&d_visited, bytesVisited));
-
-    cudaCheck(cudaMemcpy(d_costMatrix, h_costMatrix, bytesCostMatrix, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_parent, h_parent, bytesCostMatrix, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_distance, h_distance, bytesCostMatrix, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(d_visited, h_visited, bytesVisited, cudaMemcpyHostToDevice));
-
-    cout << "Kernel is executing" << endl;
-    dijkstra<<<(numVertex-1)/THREADS_PER_BLOCK+1, THREADS_PER_BLOCK>>>(numVertex, d_costMatrix, d_visited, d_distance, d_parent);
-    cudaCheck(cudaGetLastError());
-    cudaCheck(cudaDeviceSynchronize());
-    cudaCheck(cudaMemcpy(h_distance, d_distance, bytesCostMatrix, cudaMemcpyDeviceToHost));
-    cudaCheck(cudaMemcpy(h_parent, d_parent, bytesCostMatrix, cudaMemcpyDeviceToHost));
     
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&duration, start, stop);
-    cout << "Time: " << duration << "ms" << endl;
+
+    if (algorithm == "0") {
+        runCpuDijkstra(numVertex, h_costMatrix, h_distance, h_parent);
+    }
+    else if (algorithm == "1") {
+        runGpuDijkstra(numVertex, h_costMatrix, h_visited, h_distance, h_parent);
+        if (validate == "true") {
+            int* exp_parent = (int*)malloc(numVertex * numVertex * sizeof(int));
+            int* exp_distance = (int*)malloc(numVertex * numVertex * sizeof(int));
+            fill(exp_distance, exp_distance + numVertex * numVertex, INF);
+            fill(exp_parent, exp_parent + numVertex * numVertex, -1);
+            runCpuDijkstra(numVertex, h_costMatrix, h_distance, h_parent);
+            validateDistanceAPSP(numVertex, exp_distance, h_distance);
+        }
+    }
 
     // printPathAPSP(numVertex, h_distance, h_parent);
-    string pathOutputFile(string("../output/d") + string(".txt"));
+    string pathOutputFile(string("../output/d") + algorithm + string(".txt"));
     writeOutPathAPSP(pathOutputFile, numVertex, h_distance, h_parent);
 }
 

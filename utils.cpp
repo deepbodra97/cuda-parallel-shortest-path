@@ -130,9 +130,18 @@ void APSPInitDistanceParent(int numVertex, int* costMatrix, int* distance, int* 
     }
 }
 
-void validateDistance(int numVertex, int* exp_distance, int* distance) {
+void validateDistanceSSSP(int numVertex, int* exp_distance, int* distance) {
     for (int i = 0; i < numVertex; i++) {
         assert(exp_distance[i] == distance[i]);
+    }
+    cout << "Validation Successful" << endl;
+}
+
+void validateDistanceAPSP(int numVertex, int* exp_distance, int* distance) {
+    for (int i = 0; i < numVertex; i++) {
+        for (int j = 0; j < numVertex; j++) {
+            assert(exp_distance[i * numVertex + j] == distance[i * numVertex + j]);
+        }
     }
     cout << "Validation Successful" << endl;
 }

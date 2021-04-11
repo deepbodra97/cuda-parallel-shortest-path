@@ -7,6 +7,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <queue>
 #include <sstream>
 
 #include <cassert>
@@ -43,7 +44,8 @@ void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<in
 
 void APSPInitDistanceParent(int numVertex, int* costMatrix, int* distance, int* parent);
 
-void validateDistance(int numVertex, int* exp_distance, int* distance);
+void validateDistanceSSSP(int numVertex, int* exp_distance, int* distance);
+void validateDistanceAPSP(int numVertex, int* exp_distance, int* distance);
 
 void printPathSSSP(int numVertex, int* distance, int* parent);
 void printPathAPSP(int numVertex, int* distance, int* parent);
