@@ -124,7 +124,7 @@ void runGpuDijkstra(int numVertex, int* costMatrix, bool* visited, int* distance
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 4) {
+    if (argc < 5) {
         cout << "Please provide an input file as a command line argument" << endl;
         return 0;
     }
@@ -132,6 +132,7 @@ int main(int argc, char* argv[]) {
     string algorithm(argv[1]);
     string pathGraphFile(pathDataset + string(argv[2]));
     string validate(argv[3]);
+    string outputFormat(argv[4]);
 
     int numVertex, numEdges;
 
@@ -163,8 +164,21 @@ int main(int argc, char* argv[]) {
     }
 
     // printPathAPSP(numVertex, h_distance, h_parent);
-    string pathOutputFile(string("../output/d") + algorithm + string(".txt"));
-    writeOutPathAPSP(pathOutputFile, numVertex, h_distance, h_parent);
+    
+
+    if (outputFormat == "print") {
+        printPathAPSP(numVertex, h_distance, h_parent);
+    }
+    else if (outputFormat == "write") {
+        string pathOutputFile(string("../output/d") + algorithm + string(".txt"));
+        writeOutPathAPSP(pathOutputFile, numVertex, h_distance, h_parent);
+    }
+    else if (outputFormat == "none") {
+
+    }
+    else {
+        cout << "Illegal output format argument" << endl;
+    }
 }
 
 /* test case 1

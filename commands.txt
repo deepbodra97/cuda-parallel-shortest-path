@@ -16,9 +16,18 @@ make
 4. Dijkstra
 
 5. Floyd Warshall
+srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u FloydWarshall algorithm inputFileName validateOutput outputFormat -i
+algorithm=any integer in the range [0,5]
+inputFileName=name of input file with extension
+validateOutput=true|false true=compares cpu output with gpu output
+
+outputFormat=none|print|write
+print=prints distance and path info on screen
+write=distance and path info on screen
+none=doesnt print or write distance and path [use this to time the kernels]
+
+sample command
 srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u FloydWarshall 1 gnutella04.txt false write -i
-
-
 
    
 

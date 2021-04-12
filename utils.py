@@ -52,10 +52,24 @@ def replaceWeights(fileName, weightMin=1, weightMax=100):
 	file.writelines(lines)
 	file.close()
 
+def createRandomGraph(numVertex, fileName):
+	lines = [str(numVertex)+" "+str(numVertex*numVertex-numVertex)]
+	for i in range(numVertex):
+		for j in range(numVertex):
+			if i != j:
+				line = str(i) + " " + str(j) + " " + str(random.randint(1, 100)) + "\n"
+				lines.append(line)
+	file = open(fileName, "w")
+	file.writelines(lines)
+	file.close()
+
+
 if __name__ == "__main__":
 	_, action, *rest = sys.argv
 	if action == 'parse':
 		parseDIMACS(rest[0])
+	elif action == 'random':
+		createRandomGraph(int(rest[0]), rest[1])
 	else:
 		fileName, weightMin, weightMax = rest
 		if action == 'add':

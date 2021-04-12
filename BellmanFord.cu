@@ -349,7 +349,7 @@ void runBellmanFordStrideOptimize(int src, int numVertex, int* vertices, int* in
 int main(int argc, char* argv[]) {
 
 
-    if (argc < 5) {
+    if (argc < 6) {
         cout << "Please provide algorithm, input file, source and validate in the command line argument" << endl;
         return 0;
     }
@@ -358,6 +358,7 @@ int main(int argc, char* argv[]) {
     string pathGraphFile(pathDataset+string(argv[2]));
     int src = stoi(argv[3]);
     string validate(argv[4]);
+    string outputFormat(argv[4]);
 
     int numVertex, numEdges;
     vector<int> vertices, indices, edges, weights;
@@ -422,6 +423,17 @@ int main(int argc, char* argv[]) {
     cudaCheck(cudaFree(d_edges));
     cudaCheck(cudaFree(d_weights));
 
-    string pathOutputFile(string("../output/bf") + algorithm + string(".txt"));
-    // writeOutPathSSSP(pathOutputFile, numVertex, distance, parent);
+    if (outputFormat == "print") {
+        printPathSSSP(numVertex, distance, parent);
+    }
+    else if (outputFormat == "write") {
+        string pathOutputFile(string("../output/bf") + algorithm + string(".txt"));
+        writeOutPathSSSP(pathOutputFile, numVertex, distance, parent);
+    }
+    else if (outputFormat == "none") {
+
+    }
+    else {
+        cout << "Illegal output format argument" << endl;
+    }
 }

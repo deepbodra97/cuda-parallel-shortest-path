@@ -407,11 +407,13 @@ void runFloydWarshallSuperNaive(int numVertex, int* distance, int* parent) {
     cout << "copying data to GPU" << endl;
     cudaCheck(cudaMemcpy(d_distance, distance, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(d_parent, parent, numVertex * numVertex * sizeof(int), cudaMemcpyHostToDevice));
-
+    
+    dim3 dimGrid((numVertex - 1) / TILE_DIM + 1, (numVertex - 1) / TILE_DIM + 1);
+    dim3 dimBlock(TILE_DIM, TILE_DIM);
     // run kernel
     cout << "Kernel is executing" << endl;
     for (int k = 0; k < numVertex; k++) {
-        floydWarshallSuperNaive << <(numVertex - 1) / TILE_DIM + 1, (numVertex - 1) / TILE_DIM + 1 >> > (numVertex, k, d_distance, d_parent);
+        floydWarshallSuperNaive << <dimGrid, dimBlock >> > (numVertex, k, d_distance, d_parent);
         cudaCheck(cudaGetLastError());
         cudaCheck(cudaDeviceSynchronize());
     }
@@ -641,10 +643,14 @@ int main(int argc, char* argv[]) {
         }
 
         if (validate == "true") {
-            int* exp_parent = (int*)malloc(numVertex * sizeof(int));
-            int* exp_distance = (int*)malloc(numVertex * sizeof(int));
-            APSPInitDistanceParent(numVertex, costMatrix, distance, parent);
-            runCpuFloydWarshall(numVertex, distance, parent);
+            int* exp_parent = (int*)malloc(numVertex * numVertex * sizeof(int));
+            int* exp_distance = (int*)malloc(numVertex * numVertex * sizeof(int));
+            if (exp_parent == NULL || exp_distance == NULL) {
+                cout << "Malloc failed" << endl;
+                return 0;
+            }
+            APSPInitDistanceParent(numVertex, costMatrix, exp_distance, exp_parent);
+            runCpuFloydWarshall(numVertex, exp_distance, exp_parent);
             validateDistanceAPSP(numVertex, exp_distance, distance);
         }
     }
