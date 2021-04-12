@@ -60,6 +60,32 @@ int extractMin(int numVertex, int* distance, bool* visited, int src) {
     return minNode;
 }
 
+__global__
+void dijkstraNaive(int numVertex, int* h_costMatrix, bool* visited, int* distance, int* parent) {
+    int src = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (src < numVertex) {
+        distance[src * numVertex + src] = 0;
+
+        for (int i = 0; i < numVertex - 1; i++) {
+            int u = extractMin(numVertex, distance, visited, src);
+            if (u == -1) { // no min node to explore
+                break;
+            }
+            visited[src * numVertex + u] = true;
+            for (int v = 0; v < numVertex; v++) {
+                if (!visited[src * numVertex + v] && h_costMatrix[u * numVertex + v] != INF &&
+                    distance[src * numVertex + v] > distance[src * numVertex + u] + h_costMatrix[u * numVertex + v]) {
+
+                    parent[src * numVertex + v] = u;
+                    distance[src * numVertex + v] = distance[src * numVertex + u] + h_costMatrix[u * numVertex + v];
+                }
+            }
+        }
+    }
+}
+
+
 void runGpuDijkstra(int numVertex, int* costMatrix, bool* visited, int* distance, int* parent) {
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -85,7 +111,7 @@ void runGpuDijkstra(int numVertex, int* costMatrix, bool* visited, int* distance
     cudaCheck(cudaMemcpy(d_visited, visited, numVertex * numVertex * sizeof(bool), cudaMemcpyHostToDevice));
 
     cout << "Kernel is executing" << endl;
-    dijkstra << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, d_costMatrix, d_visited, d_distance, d_parent);
+    dijkstraNaive << <(numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > (numVertex, d_costMatrix, d_visited, d_distance, d_parent);
     cudaCheck(cudaGetLastError());
     cudaCheck(cudaDeviceSynchronize());
     cudaCheck(cudaMemcpy(distance, d_distance, numVertex * numVertex * sizeof(int), cudaMemcpyDeviceToHost));
@@ -97,34 +123,8 @@ void runGpuDijkstra(int numVertex, int* costMatrix, bool* visited, int* distance
     cout << "Time: " << duration << "ms" << endl;
 }
 
-__global__
-void dijkstra(int numVertex, int* h_costMatrix, bool* visited, int* distance, int* parent) {
-    int src = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (src < numVertex) {
-        distance[src * numVertex + src] = 0;
-
-        for (int i = 0; i < numVertex - 1; i++) {
-            int u = extractMin(numVertex, distance, visited, src);
-            if (u == -1) { // no min node to explore
-                break;
-            }
-            visited[src * numVertex + u] = true;
-            for (int v = 0; v < numVertex; v++) {
-                if (!visited[src * numVertex + v] && h_costMatrix[u * numVertex + v] != INF &&
-                    distance[src * numVertex + v] > distance[src * numVertex + u] + h_costMatrix[u * numVertex + v]){
-                    
-                    parent[src * numVertex + v] = u;
-                    distance[src * numVertex + v] = distance[src * numVertex + u] + h_costMatrix[u * numVertex + v];
-                }
-            }
-        }
-    }
-}
-
-
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
+    if (argc < 4) {
         cout << "Please provide an input file as a command line argument" << endl;
         return 0;
     }

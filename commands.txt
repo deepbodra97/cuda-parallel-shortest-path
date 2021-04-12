@@ -1,0 +1,26 @@
+1. Command to load necessary modules
+
+module load ufrc cmake/3.19.1 intel/2018.1.163 cuda/10.0.130
+
+2. Make
+Make sure CMakeLists.txt is in the parent directory of Debug/Release
+
+mkdir Debug
+cd Debug
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make
+
+
+3. Bellman Ford
+
+4. Dijkstra
+
+5. Floyd Warshall
+srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u FloydWarshall 1 gnutella04.txt false write -i
+
+
+
+   
+
+
+

@@ -607,14 +607,15 @@ void runFloydWarshallTiledShared(int numVertex, int* distance, int* parent) {
 
 int main(int argc, char* argv[]) {
 
-    if (argc < 4) {
-        cout << "Please provide algorithm and input file as a command line argument" << endl;
+    if (argc < 5) {
+        cout << "Please provide proper command line arguments" << endl;
         return 0;
     }
     string pathDataset("../data/");
     string algorithm(argv[1]);
     string pathGraphFile(pathDataset+string(argv[2]));
     string validate(argv[3]);
+    string outputFormat(argv[4]);
 
     int numVertex, numEdges;
     int* costMatrix = fileToCostMatrix(pathGraphFile, numVertex, numEdges);
@@ -647,7 +648,15 @@ int main(int argc, char* argv[]) {
             validateDistanceAPSP(numVertex, exp_distance, distance);
         }
     }
-    //  printPathAPSP(numVertex, distance, parent);
-    string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));
-    writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
+    //  
+    if (outputFormat == "print") {
+        printPathAPSP(numVertex, distance, parent);
+    } else if (outputFormat == "write") {
+        string pathOutputFile(string("../output/fw") + algorithm + string(".txt"));
+        writeOutPathAPSP(pathOutputFile, numVertex, distance, parent);
+    } else if (outputFormat == "none") {
+
+    } else {
+        cout << "Illegal output format argument" << endl;
+    }
 }
