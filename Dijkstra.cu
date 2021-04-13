@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
             int* exp_distance = (int*)malloc(numVertex * numVertex * sizeof(int));
             fill(exp_distance, exp_distance + numVertex * numVertex, INF);
             fill(exp_parent, exp_parent + numVertex * numVertex, -1);
-            runCpuDijkstra(numVertex, h_costMatrix, h_distance, h_parent);
+            runCpuDijkstra(numVertex, h_costMatrix, exp_distance, exp_parent);
             validateDistanceAPSP(numVertex, exp_distance, h_distance);
         }
     }
