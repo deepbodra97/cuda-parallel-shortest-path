@@ -14,6 +14,7 @@ make
 3. Bellman Ford
 
 4. Dijkstra
+srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u Dijkstras 0 sample1.txt false print-i
 
 5. Floyd Warshall
 srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u FloydWarshall algorithm inputFileName validateOutput outputFormat -i
@@ -29,7 +30,11 @@ none=doesnt print or write distance and path [use this to time the kernels]
 sample command
 srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u FloydWarshall 1 gnutella04.txt false write -i
 
-   
+
+
+------
+create a random graph of 100 vertices and store it in a file named sample2.txt
+python utils.py random 100 ./data/sample2.txt
 
 
 

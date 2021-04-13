@@ -105,7 +105,7 @@ void validateDistanceSSSP(int numVertex, int* exp_distance, int* distance) {
 void validateDistanceAPSP(int numVertex, int* exp_distance, int* distance) {
     for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
-            cout << i << " " << j << " " << exp_distance[i * numVertex + j] << " " << distance[i * numVertex + j] << endl;
+            // cout << i << " " << j << " " << exp_distance[i * numVertex + j] << " " << distance[i * numVertex + j] << endl;
             assert(exp_distance[i * numVertex + j] == distance[i * numVertex + j]);
         }
     }

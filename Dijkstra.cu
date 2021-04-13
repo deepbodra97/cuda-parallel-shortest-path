@@ -13,16 +13,17 @@ void dijkstra(int src, int numVertex, int* costMatrix, int* distance, int* paren
     priority_queue< pair<int, int>, vector <pair<int, int>>, greater<pair<int, int>> > heap;
 
     heap.push(make_pair(0, src));
-    distance[src * numVertex] = 0;
+    distance[src * numVertex + src] = 0;
     while (!heap.empty()) {
         int u = heap.top().second;
         heap.pop();
 
         for (int v = 0; v < numVertex ; v++) {
-            int weight = costMatrix[src * numVertex + v];
+            int weight = costMatrix[u * numVertex + v];
 
-            if (distance[src * numVertex + v] > distance[src * numVertex + u] + weight) {
+            if (weight != INF && distance[src * numVertex + v] > distance[src * numVertex + u] + weight) {
                 distance[src * numVertex + v] = distance[src * numVertex + u] + weight;
+                parent[src * numVertex + v] = u;
                 heap.push(make_pair(distance[src * numVertex + v], v));
             }
         }
