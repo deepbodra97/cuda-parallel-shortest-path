@@ -22,7 +22,7 @@ void runCpuBellmanFord(int src, int numVertex, int* vertices, int* indices, int*
     cudaEventRecord(start, 0);
 
     distance[src] = 0;
-    for (int k = 0; k < numVertex; k++) { // a total of numVertex iterations
+    for (int k = 0; k < numVertex-1; k++) { // a total of numVertex-1 iterations
         for (int i = 0; i < numVertex; i++) { // loop through all vertices
             for (int j = indices[i]; j < indices[i + 1]; j++) { // loop through neighbors of i
                 int v = edges[j]; // neighbor j
@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
     string pathGraphFile(pathDataset+string(argv[2])); // input file
     int src = stoi(argv[3]); // source node in the range [0, n-1]
     string validate(argv[4]); // true=compare output with cpu, false=dont
-    string outputFormat(argv[4]); // none=no output (to time the kernel), print=prints path on screen, write=write output to a file in the directory named output
+    string outputFormat(argv[5]); // none=no output (to time the kernel), print=prints path on screen, write=write output to a file in the directory named output
 
     int numVertex, numEdges;
     vector<int> vertices, indices, edges, weights; // for CSR format of a graph
@@ -411,6 +411,12 @@ int main(int argc, char* argv[]) {
     if (algorithm == "0") { // cpu version
         runCpuBellmanFord(src, numVertex, vertices.data(), indices.data(), edges.data(), weights.data(), distance, parent);
     } else{
+        cout << "Warming up the GPU" << endl;
+        warmpupGpu << < (numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > ();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
+        cout << "GPU is warmed up" << endl;
+
         if (algorithm == "1") { // naive
             runBellmanFordNaive(src, numVertex, d_vertices, d_indices, d_edges, d_weights, distance, parent);
         }
@@ -445,6 +451,7 @@ int main(int argc, char* argv[]) {
     }
     else if (outputFormat == "write") { // write output to a file named bf{algorithm}.txt in output directory
         string pathOutputFile(string("../output/bf") + algorithm + string(".txt"));
+        cout << "Writing output to" << pathOutputFile << endl;
         writeOutPathSSSP(pathOutputFile, numVertex, distance, parent);
     }
     else if (outputFormat == "none") { // dont write out path

@@ -12,7 +12,7 @@ make
 
 
 3. Bellman Ford
-//srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u BellmanFord 0 sample1.txt false print-i
+//srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u BellmanFord 2 sample1.txt 0 false print-i
 
 4. Dijkstra
 srun -p gpu --nodes=1 --gpus=geforce:1 --time=00:05:00 --mem=1500 --pty -u Dijkstras 0 sample1.txt false print-i

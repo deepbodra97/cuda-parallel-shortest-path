@@ -1,6 +1,3 @@
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <iostream>
 
 #include "cudaCheck.cuh"
@@ -165,6 +162,12 @@ int main(int argc, char* argv[]) {
         runCpuDijkstra(numVertex, h_costMatrix, h_distance, h_parent);
     }
     else if (algorithm == "1") { // naive
+        cout << "Warming up the GPU" << endl;
+        warmpupGpu << < (numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > ();
+        cudaCheck(cudaGetLastError());
+        cudaCheck(cudaDeviceSynchronize());
+        cout << "GPU is warmed up" << endl;
+
         runGpuDijkstra(numVertex, h_costMatrix, h_visited, h_distance, h_parent);
         if (validate == "true") {
             int* expParent = (int*)malloc(numVertex * numVertex * sizeof(int)); // expected parent
@@ -181,6 +184,7 @@ int main(int argc, char* argv[]) {
     }
     else if (outputFormat == "write") { // write output to a file named d{algorithm}.txt in output directory
         string pathOutputFile(string("../output/d") + algorithm + string(".txt"));
+        cout << "Writing output to" << pathOutputFile << endl;
         writeOutPathAPSP(pathOutputFile, numVertex, h_distance, h_parent);
     }
     else if (outputFormat == "none") { // dont write out path
