@@ -2,10 +2,12 @@ Instructions to run
 
 1. Project Structure
 	1. Unzip the project
-	2. You will see 2 folders in the project. "data" contains all the dataset files. sample1.txt represents a graph with 6 nodes and 9 edges. sample2.txt represents a graph with 100 nodes and 99000 edges "output" contains all the output files. sample files are to be used to confirm the correctness of the algorithms because CPU could take hours to run for other files. The output files will be overwritten if you rerun the code.
+	2. You will see 2 folders in the project. "data" contains all the dataset files. sample1.txt represents a graph with 6 nodes and 9 edges. sample2.txt represents a graph with 100 nodes and 99000 edges. "output" stores the output files. Currently it has a blank dummy files. The output of all the algorithms on just one dataset itself is 20GB so they are not included due to size constraints. sample files are to be used to confirm the correctness of the algorithms because CPU could take hours to run for other files. The output files will be overwritten if you rerun the code.
 	3. The source code files and CMakeLists.txt will be in the root of the project.
+
 2. Load modules
 	2.1 module load ufrc cmake/3.19.1 intel/2018.1.163 cuda/10.0.130
+	
 3. Compile
 	3.1 mkdir Release
 	3.2 cd Release
@@ -28,7 +30,7 @@ Instructions to run
 
 	outputFormat=none|print|write
 	print=prints distance and path info on screen
-	write=distance and path info on screen
+	write=distance and path is written in a file named bf{algorithm}.txt in "output" folder
 	none=doesnt print or write distance and path [use this to time the kernels]
 
 	Run this sample command to make sure everything is set up correctly. It will print output on screen for the input file sample1.txt
@@ -47,7 +49,7 @@ Instructions to run
 
 	outputFormat=none|print|write
 	print=prints distance and path info on screen
-	write=distance and path info on screen
+	write=distance and path is written in a file named d{algorithm}.txt in "output" folder
 	none=doesnt print or write distance and path [use this to time the kernels]
 
 
@@ -66,7 +68,7 @@ Instructions to run
 
 	outputFormat=none|print|write
 	print=prints distance and path info on screen
-	write=distance and path info on screen
+	write=distance and path is written in a file named fw{algorithm}.txt in "output" folder
 	none=doesnt print or write distance and path [use this to time the kernels]
 
 	sample command
