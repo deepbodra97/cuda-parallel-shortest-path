@@ -18,7 +18,6 @@ cudaError_t cudaCheck(cudaError_t result) {
     return result;
 }
 
-inline
 __global__
 void warmpupGpu() {
     __shared__ int s_tid;

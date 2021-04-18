@@ -412,9 +412,11 @@ int main(int argc, char* argv[]) {
         runCpuBellmanFord(src, numVertex, vertices.data(), indices.data(), edges.data(), weights.data(), distance, parent);
     } else{
         cout << "Warming up the GPU" << endl;
-        warmpupGpu << < (numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > ();
-        cudaCheck(cudaGetLastError());
-        cudaCheck(cudaDeviceSynchronize());
+        for(int x=0; x<NUM_ITERATION_WARMUP; x++){
+            warmpupGpu << < (numVertex - 1) / THREADS_PER_BLOCK + 1, THREADS_PER_BLOCK >> > ();
+            cudaCheck(cudaGetLastError());
+            cudaCheck(cudaDeviceSynchronize());
+        }
         cout << "GPU is warmed up" << endl;
 
         if (algorithm == "1") { // naive

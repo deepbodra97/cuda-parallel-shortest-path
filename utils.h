@@ -16,6 +16,7 @@
 
 #include<exception>
 
+#define NUM_ITERATION_WARMUP 10
 #define INF INT_MAX
 #define THREADS_PER_BLOCK 1024
 
