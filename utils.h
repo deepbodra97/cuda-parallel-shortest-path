@@ -22,21 +22,6 @@
 
 using namespace std;
 
-struct AdjacencyListNode {
-	int dest;
-	int cost;
-	struct AdjacencyListNode* next;
-};
-
-struct AdjacencyList {
-	struct AdjacencyListNode* head;
-};
-
-struct Graph {
-	int numVertex;
-	struct AdjacencyList* neighbors;
-};
-
 int* fileToCostMatrix(string filename, int& numVertex, int& numEdges);
 struct Graph* fileToAdjacencyList(string filename, struct Graph* costMatrix);
 void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges);

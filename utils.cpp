@@ -8,6 +8,7 @@ void splitBySpaceToVector(const string& line, vector<string>& tokens) {
     }
 }
 
+// converts input graph file to cost matrix
 int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
     cout << "Reading input file" << endl;
     ifstream file(filename);
@@ -26,7 +27,7 @@ int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
     }
     fill(costMatrix, costMatrix + numVertex * numVertex, INF);
 
-    while (getline(file, line)) {
+    while (getline(file, line)) { // parse input file line by line
         stringstream linestream(line);
         vector<string> tokens;
         string token;
@@ -34,12 +35,13 @@ int* fileToCostMatrix(string filename, int& numVertex, int& numEdges) {
             tokens.push_back(token);
         }
         int src = stoi(tokens[0]), dest = stoi(tokens[1]), cost = stoi(tokens[2]);
-        costMatrix[src * numVertex + dest] = cost;
+        costMatrix[src * numVertex + dest] = cost; // update cost matrix
     }
     cout << "Finished reading input file" << endl;
     return costMatrix;
 }
 
+// converts input graph file to adjacency list
 void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjacencyList, int& numVertex, int& numEdges) {
     cout << "Reading input file" << endl;
     ifstream file(filename);
@@ -51,7 +53,7 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
     splitBySpaceToVector(line, tokens);
     numVertex = stoi(tokens[0]), numEdges = stoi(tokens[1]);
 
-    while (getline(file, line)) {
+    while (getline(file, line)) { // parse input file line by line
         tokens.clear();
         splitBySpaceToVector(line, tokens);
         int src = stoi(tokens[0]), dest = stoi(tokens[1]), cost = stoi(tokens[2]);
@@ -60,6 +62,7 @@ void fileToAdjacencyList(string filename, map<int, list<pair<int, int>>>& adjace
     cout << "Finished reading input file" << endl;
 }
 
+// converts adjacency list to CSR format
 void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<int>& vertices, vector<int>& indices, vector<int>& edges, vector<int>& weights) {
     int index = 0;
     indices.push_back(index);
@@ -75,6 +78,7 @@ void adjacencyListToCSR(map<int, list<pair<int, int>>>& adjacencyList, vector<in
     }
 }
 
+// initialize distance and parent for floyd warshall
 void APSPInitDistanceParent(int numVertex, int* costMatrix, int* distance, int* parent) {
     cout << "Initializing distance and parent matrices using the cost matrix" << endl;
     for (int i = 0; i < numVertex; i++) {
@@ -95,6 +99,7 @@ void APSPInitDistanceParent(int numVertex, int* costMatrix, int* distance, int* 
     }
 }
 
+// compare gpu output with cpu output for single source shortest path
 void validateDistanceSSSP(int numVertex, int* expDistance, int* distance) {
     for (int i = 0; i < numVertex; i++) {
         assert(expDistance[i] == distance[i]);
@@ -102,16 +107,17 @@ void validateDistanceSSSP(int numVertex, int* expDistance, int* distance) {
     cout << "Validation Successful" << endl;
 }
 
+// compare gpu output with cpu output for all pairs shortest path
 void validateDistanceAPSP(int numVertex, int* expDistance, int* distance) {
     for (int i = 0; i < numVertex; i++) {
         for (int j = 0; j < numVertex; j++) {
-            // cout << i << " " << j << " " << expDistance[i * numVertex + j] << " " << distance[i * numVertex + j] << endl;
             assert(expDistance[i * numVertex + j] == distance[i * numVertex + j]);
         }
     }
     cout << "Validation Successful" << endl;
 }
 
+// print single source shortest path on screen
 void printPathSSSP(int numVertex, int* distance, int* parent) {
     cout << "Node\tCost\tPath" << endl;
     for (int i = 0; i < numVertex; i++) {
@@ -133,6 +139,7 @@ void printPathSSSP(int numVertex, int* distance, int* parent) {
     }
 }
 
+// write single source shortest path to a file
 void writeOutPathSSSP(string filepath, int numVertex, int* distance, int* parent) {
     ofstream out(filepath);
     out << "Node\tCost\tPath" << endl;
@@ -158,7 +165,7 @@ void writeOutPathSSSP(string filepath, int numVertex, int* distance, int* parent
     out.close();
 }
 
-
+// print all pairs source shortest path on screen
 void printPathAPSP(int numVertex, int* distance, int* parent) {
     for (int src = 0; src < numVertex; src++) {
         cout << "Source: " << src << endl;
@@ -186,6 +193,7 @@ void printPathAPSP(int numVertex, int* distance, int* parent) {
     }
 }
 
+// write all pairs source shortest path to a file
 void writeOutPathAPSP(string filepath, int numVertex, int* distance, int* parent) {
     ofstream out(filepath);
     for (int src = 0; src < numVertex; src++) {

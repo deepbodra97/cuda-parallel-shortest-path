@@ -65,7 +65,7 @@ srun -p gpu --nodes=1 --gpus=geforce:1 --time=01:00:00 --mem=25000 --pty -u Floy
 
 
 
-------
+
 create a random graph of 100 vertices and store it in a file named sample2.txt
 python utils.py random 100 ./data/sample2.txt
 
