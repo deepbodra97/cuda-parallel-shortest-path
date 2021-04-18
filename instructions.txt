@@ -21,7 +21,9 @@ Instructions to run
 
 	algorithm=any integer in the range [0,3] both inclusive 0=CPU, 1=strided, 2=stride with flag
 	inputFileName=name of input file with extension (this file should be in "data" folder) use any of these files sample1.txt, sample2.txt, nyc.txt, bay.txt, col.txt, fla.txt, ne.txt, e.txt
+
 	source = source node in the graph. any number in the range [0, number of nodes-1] both inclusive
+	
 	validateOutput=true|false true=compares gpu's output against cpu's output
 
 	outputFormat=none|print|write
@@ -33,11 +35,14 @@ Instructions to run
 	srun -p gpu --nodes=1 --gpus=geforce:1 --time=01:00:00 --mem=1600 --pty -u BellmanFord 1 sample1.txt 0 false print -i
 
 5. Dijkstra
-
+	
+	Command Format
 	srun -p gpu --nodes=1 --gpus=geforce:1 --time=01:00:00 --mem=1600 --pty -u Dijkstra algorithm inputFileName validateOutput outputFormat -i
 
 	algorithm=any integer in the range [0,1] both inclusive. 0=CPU, 1=CPU
+	
 	inputFileName=name of input file with extension (this file should be in "data" folder) use any of these files sample1.txt, sample2.txt, gnutella04.txt, gnutella25.txt, gnutella30.txt
+	
 	validateOutput=true|false true=compares gpu's output against cpu's output
 
 	outputFormat=none|print|write
@@ -50,9 +55,13 @@ Instructions to run
 	srun -p gpu --nodes=1 --gpus=geforce:1 --time=01:00:00 --mem=1500 --pty -u Dijkstra 0 sample1.txt false print -i
 
 6. Floyd Warshall
+	Command Format
 	srun -p gpu --nodes=1 --gpus=geforce:1 --time=01:00:00 --mem=1500 --pty -u FloydWarshall algorithm inputFileName validateOutput outputFormat -i
+	
 	algorithm=any integer in the range [0,5], 0=CPU, 1=Super Naive, 2=Naive, 3=Super Naive Shared, 4=Tiled Global, 5=Tiled Shared Memory
+	
 	inputFileName=name of input file with extension
+	
 	validateOutput=true|false true=compares cpu output with gpu output
 
 	outputFormat=none|print|write
