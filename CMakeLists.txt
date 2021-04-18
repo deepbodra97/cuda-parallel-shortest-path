@@ -16,9 +16,9 @@ if(NOT CMAKE_BUILD_TYPE)
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-add_executable(BellmanFord BellmanFord.cu utils.cpp utils.h)
-add_executable(Dijkstra Dijkstra.cu utils.cpp utils.h)
-add_executable(FloydWarshall FloydWarshall.cu utils.cpp utils.h)
+add_executable(BellmanFord BellmanFord.cu utils.cpp utils.h utils.cuh)
+add_executable(Dijkstra Dijkstra.cu utils.cpp utils.h utils.cuh)
+add_executable(FloydWarshall FloydWarshall.cu utils.cpp utils.cuh)
 
 
 message(STATUS "build type:  ${CMAKE_BUILD_TYPE}")
