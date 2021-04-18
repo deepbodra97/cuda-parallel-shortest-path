@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "cudaCheck.cuh"
+#include "utils.cuh"
 
 #include "utils.h"
 
